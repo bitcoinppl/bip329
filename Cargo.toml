@@ -8,7 +8,6 @@ license = "Apache-2.0"
 
 repository = "https://github.com/bitcoinppl/bip329"
 keywords = ["bitcoin", "bip329", "labels"]
-categories = ["bitcoin"]
 
 homepage = "https://github.com/bitcoinppl/bip329"
 documentation = "https://docs.rs/bip329"
