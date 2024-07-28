@@ -1,5 +1,6 @@
 pub mod error;
 pub mod label;
+mod serde_util;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
@@ -7,6 +8,9 @@ pub struct Labels(Vec<Label>);
 
 #[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(tag = "type")]
+/// Labels are the main data structure for BIP329 labels.
+/// They are a list of Labels, each of which is a type of label.
+/// The type of label is determined by the `type` field.
 pub enum Label {
     #[serde(rename = "tx")]
     Transaction(TransactionRecord),
@@ -23,6 +27,7 @@ pub enum Label {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
+/// A transaction label.
 pub struct TransactionRecord {
     #[serde(rename = "ref")]
     ref_: String,
@@ -33,6 +38,7 @@ pub struct TransactionRecord {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
+/// An address label.
 pub struct AddressRecord {
     #[serde(rename = "ref")]
     ref_: String,
@@ -41,6 +47,7 @@ pub struct AddressRecord {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
+/// A public key label.
 pub struct PublicKeyRecord {
     #[serde(rename = "ref")]
     ref_: String,
@@ -65,7 +72,11 @@ pub struct OutputRecord {
     #[serde(skip_serializing_if = "Option::is_none")]
     label: Option<String>,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "serde_util::deserialize_string_or_bool"
+    )]
     spendable: Option<bool>,
 }
 
