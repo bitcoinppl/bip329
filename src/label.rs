@@ -10,10 +10,12 @@ use std::{
 };
 
 impl Labels {
+    /// Create a new Labels struct.
     pub fn new(labels: Vec<Label>) -> Self {
         Labels(labels)
     }
 
+    /// Create a new Labels struct from a string.
     pub fn try_from_str(labels: &str) -> Result<Self, ParseError> {
         let labels = labels
             .lines()
@@ -23,6 +25,7 @@ impl Labels {
         Ok(Labels(labels))
     }
 
+    /// Create a new Labels struct from a file.
     pub fn try_from_file(path: impl AsRef<Path>) -> Result<Self, ParseError> {
         let file = File::open(path.as_ref())?;
         let buffer_reader = BufReader::new(file);
@@ -39,6 +42,7 @@ impl Labels {
         Ok(Self::new(labels))
     }
 
+    /// Export the Labels struct to a string.
     pub fn export(&self) -> Result<String, ExportError> {
         let contents = self
             .0
@@ -49,12 +53,24 @@ impl Labels {
         Ok(contents.join("\n"))
     }
 
+    /// Export the Labels struct to a file.
     pub fn export_to_file(&self, path: &str) -> Result<(), ExportError> {
         let contents = self.export()?;
         std::fs::write(path, contents)?;
         Ok(())
     }
 
+    /// Export the Labels struct to a writer.
+    pub fn export_to_writer<W: std::io::Write>(&self, mut writer: W) -> Result<(), ExportError> {
+        self.0.iter().try_for_each(|label: &Label| {
+            let label = serde_json::to_string(label)?;
+            writer.write_all(label.as_bytes())?;
+            writer.write_all(b"\n")?;
+            Ok(())
+        })
+    }
+
+    /// Get the inner Vec of the Labels struct.
     pub fn into_vec(self) -> Vec<Label> {
         self.0
     }
@@ -213,5 +229,18 @@ mod tests {
             assert_eq!(*spendable, None);
             assert!(record.spendable());
         };
+    }
+
+    #[test]
+    fn test_export_to_writer() {
+        let mut buffer = Vec::new();
+
+        let labels = Labels::try_from_file("tests/data/labels.jsonl").unwrap();
+        labels.export_to_writer(&mut buffer).unwrap();
+
+        let jsonl_string = std::str::from_utf8(&buffer).unwrap().trim();
+        let expected = std::fs::read_to_string("tests/data/labels.jsonl").unwrap();
+
+        assert_eq!(jsonl_string, expected);
     }
 }

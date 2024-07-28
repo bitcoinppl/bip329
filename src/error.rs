@@ -1,4 +1,5 @@
 #[derive(Debug, thiserror::Error)]
+/// Errors that can occur when parsing a label.
 pub enum ParseError {
     #[error("Unable to read file: {0}")]
     FileReadError(#[from] std::io::Error),
@@ -8,6 +9,7 @@ pub enum ParseError {
 }
 
 #[derive(Debug, thiserror::Error)]
+/// Errors that can occur when exporting a label.
 pub enum ExportError {
     #[error("Unable to write file: {0}")]
     FileWriteError(#[from] std::io::Error),
