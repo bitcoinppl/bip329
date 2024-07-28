@@ -1,4 +1,5 @@
 [package]
+authors = ["Praveen Perera <me@praveenperera.com>"]
 name = "bip329"
 version = "0.1.0"
 edition = "2021"
