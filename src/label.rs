@@ -12,7 +12,7 @@ use std::{
 impl Labels {
     /// Create a new Labels struct.
     pub fn new(labels: Vec<Label>) -> Self {
-        Labels(labels)
+        Self(labels)
     }
 
     /// Create a new Labels struct from a string.
@@ -22,7 +22,7 @@ impl Labels {
             .map(serde_json::from_str)
             .collect::<Result<Vec<Label>, _>>()?;
 
-        Ok(Labels(labels))
+        Ok(Self(labels))
     }
 
     /// Create a new Labels struct from a file.
@@ -71,14 +71,16 @@ impl Labels {
     }
 
     /// Get the inner Vec of the Labels struct.
+    #[must_use]
     pub fn into_vec(self) -> Vec<Label> {
         self.0
     }
 }
 
 impl Label {
+    /// Create a new Label struct from a string.
     pub fn try_from_str(label: &str) -> Result<Self, ParseError> {
-        let label: Label = serde_json::from_str(label)?;
+        let label: Self = serde_json::from_str(label)?;
         Ok(label)
     }
 }
