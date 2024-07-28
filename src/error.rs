@@ -1,3 +1,5 @@
+//! Module for all error types used in this crate.
+
 #[cfg(feature = "uniffi")]
 pub mod ffi;
 

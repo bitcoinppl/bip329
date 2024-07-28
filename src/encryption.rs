@@ -1,11 +1,21 @@
+//! Module for encrypting and decrypting labels.
+
 use std::{
     io::{Read as _, Write as _},
     path::Path,
 };
 
 use age::secrecy::Secret;
+use serde::{Deserialize, Serialize};
 
-use crate::{error::EncryptionError, EncryptedLabels, Labels};
+use crate::{error::EncryptionError, Labels};
+
+/// A list of encrypted labels.
+#[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct EncryptedLabels(Vec<u8>);
+
+#[cfg(feature = "uniffi")]
+uniffi::custom_newtype!(EncryptedLabels, Vec<u8>);
 
 impl EncryptedLabels {
     /// Encrypt the Labels struct using the given passphrase.
@@ -28,14 +38,9 @@ impl EncryptedLabels {
         Ok(Self(encrypted))
     }
 
-    /// Get the encrypted bytes of the EncryptedLabels struct.
-    pub fn into_bytes(self) -> Vec<u8> {
-        self.0
-    }
-
     /// Create a new EncryptedLabels struct from a hex encoded string.
-    pub fn from_hex_encoded(hex_encoded: &str) -> Result<Self, EncryptionError> {
-        let encrypted = hex::decode(hex_encoded)?;
+    pub fn from_hex(hex: &str) -> Result<Self, EncryptionError> {
+        let encrypted = hex::decode(hex)?;
         Ok(Self(encrypted))
     }
 
@@ -45,6 +50,11 @@ impl EncryptedLabels {
         let encrypted = std::fs::read(path)?;
 
         Ok(Self(encrypted))
+    }
+
+    /// Get the encrypted bytes of the EncryptedLabels struct.
+    pub fn into_bytes(self) -> Vec<u8> {
+        self.0
     }
 
     /// Decrypt the EncryptedLabels struct using the given passphrase.
@@ -71,7 +81,7 @@ impl EncryptedLabels {
     }
 
     /// Export the EncryptedLabels struct to a hex encoded string.
-    pub fn to_hex_encoded(&self) -> Result<String, EncryptionError> {
+    pub fn to_hex(&self) -> Result<String, EncryptionError> {
         let encrypted = &self.0;
         let hex_encoded = hex::encode(encrypted);
 

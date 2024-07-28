@@ -1,4 +1,4 @@
-use bip329::Labels;
+use bip329::{encryption::EncryptedLabels, Labels};
 
 #[test]
 fn test_loop_back() {
@@ -24,4 +24,15 @@ fn loop_back_test_vector() {
     let labels_2 = Labels::try_from_str(&export_json).unwrap();
 
     assert_eq!(labels_1, labels_2);
+}
+
+#[test]
+fn test_loop_back_encryption() {
+    use pretty_assertions::assert_eq;
+
+    let labels_1 = Labels::try_from_file("tests/data/labels.jsonl").unwrap();
+    let encrypted = EncryptedLabels::encrypt(&labels_1, "passphrase").unwrap();
+    let decrypted = encrypted.decrypt("passphrase").unwrap();
+
+    assert_eq!(labels_1, decrypted);
 }

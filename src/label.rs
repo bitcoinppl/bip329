@@ -54,7 +54,7 @@ impl Labels {
     }
 
     /// Export the Labels struct to a file.
-    pub fn export_to_file(&self, path: &str) -> Result<(), ExportError> {
+    pub fn export_to_file(&self, path: impl AsRef<Path>) -> Result<(), ExportError> {
         let contents = self.export()?;
         std::fs::write(path, contents)?;
         Ok(())

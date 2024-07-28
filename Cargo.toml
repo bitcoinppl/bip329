@@ -9,7 +9,7 @@ keywords = ["bitcoin", "bip329", "labels"]
 categories = ["bitcoin"]
 
 [features]
-default = ["encryption", "uniffi"]
+default = ["encryption"]
 encryption = ["dep:age", "dep:hex"]
 uniffi = ["dep:uniffi"]
 
