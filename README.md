@@ -4,7 +4,6 @@
     <a href="https://crates.io/crates/bip329"><img alt="Crate Info" src="https://img.shields.io/crates/v/bip329.svg"/></a>
     <a href="https://github.com/bitcoinppl/bip329/blob/master/LICENSE"><img alt="Apache-2.0 Licensed" src="https://img.shields.io/badge/Apache--2.0-blue.svg"/></a>
     <a href="https://github.com/bitcoinppl/bip329/actions?query=workflow%3ACI"><img alt="CI Status" src="https://github.com/bitcoinppl/bip329/workflows/CI/badge.svg"></a>
-    <a href="https://coveralls.io/github/bitcoinppl/bdk?branch=master"><img src="https://coveralls.io/repos/github/bitcoinppl/bip329/badge.svg?branch=master"/></a>
     <a href="https://docs.rs/bip329"><img alt="Docs" src="https://img.shields.io/badge/docs.rs-green"/></a>
 </p>
 
