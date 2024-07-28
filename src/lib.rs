@@ -34,15 +34,19 @@ mod serde_util;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
 /// A list of labels.
+#[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Labels(Vec<Label>);
 
-#[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
-#[serde(tag = "type")]
+#[cfg(feature = "uniffi")]
+uniffi::custom_newtype!(Labels, Vec<Label>);
+
 /// Labels are the main data structure for BIP329 labels.
 /// They are a list of Labels, each of which is a type of label.
 /// The type of label is determined by the `type` field.
+#[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(tag = "type")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 pub enum Label {
     #[serde(rename = "tx")]
     Transaction(TransactionRecord),
@@ -58,8 +62,9 @@ pub enum Label {
     ExtendedPublicKey(ExtendedPublicKeyRecord),
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
 /// A transaction label.
+#[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct TransactionRecord {
     #[serde(rename = "ref")]
     ref_: String,
@@ -69,8 +74,9 @@ pub struct TransactionRecord {
     origin: Option<String>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
 /// An address label.
+#[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct AddressRecord {
     #[serde(rename = "ref")]
     ref_: String,
@@ -78,8 +84,9 @@ pub struct AddressRecord {
     label: Option<String>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
 /// A public key label.
+#[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct PublicKeyRecord {
     #[serde(rename = "ref")]
     ref_: String,
@@ -88,8 +95,9 @@ pub struct PublicKeyRecord {
     label: Option<String>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
 /// An input label.
+#[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct InputRecord {
     #[serde(rename = "ref")]
     ref_: String,
@@ -97,8 +105,9 @@ pub struct InputRecord {
     label: Option<String>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
 /// An output label.
+#[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct OutputRecord {
     #[serde(rename = "ref")]
     ref_: String,
@@ -114,8 +123,9 @@ pub struct OutputRecord {
     spendable: Option<bool>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
 /// An extended public key label.
+#[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct ExtendedPublicKeyRecord {
     #[serde(rename = "ref")]
     ref_: String,
@@ -128,3 +138,6 @@ impl OutputRecord {
         self.spendable.unwrap_or(true)
     }
 }
+
+#[cfg(feature = "uniffi")]
+uniffi::setup_scaffolding!();
