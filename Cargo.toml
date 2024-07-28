@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-default = []
+default = ["encryption"]
+encryption = ["dep:age", "dep:hex"]
 uniffi = ["dep:uniffi"]
 
 [dependencies]
@@ -15,6 +16,11 @@ serde_json = "1.0"
 # error handling
 thiserror = "1.0"
 
+# encryption (feature)
+age = { version = "0.10", optional = true }
+hex = { version = "0.4", optional = true }
+
+# uniffi (feature)
 uniffi = { version = "0.28", optional = true }
 
 [dev-dependencies]

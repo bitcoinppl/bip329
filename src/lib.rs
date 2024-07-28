@@ -29,6 +29,9 @@
 //!
 pub mod error;
 
+#[cfg(feature = "encryption")]
+pub mod encryption;
+
 mod label;
 mod serde_util;
 
@@ -40,6 +43,12 @@ pub struct Labels(Vec<Label>);
 
 #[cfg(feature = "uniffi")]
 uniffi::custom_newtype!(Labels, Vec<Label>);
+
+#[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct EncryptedLabels(Vec<u8>);
+
+#[cfg(feature = "uniffi")]
+uniffi::custom_newtype!(EncryptedLabels, Vec<u8>);
 
 /// Labels are the main data structure for BIP329 labels.
 /// They are a list of Labels, each of which is a type of label.
