@@ -2,13 +2,13 @@
 //!
 //! This library provides a way to work with BIP329 labels in a Rust program.
 //!
-//! The main data structure is the [`Labels`] struct, which is a list of `Label` structs.
+//! The main data structure is the [`Labels`](crate::Labels) struct, which is a list of [`Label`](crate::Label) structs.
 //!
-//! The [`Label`] enum is a discriminated union of all the different types of labels.
+//! The [`Label`](crate::Label) enum is a discriminated union of all the different types of labels.
 //!
-//! The [`Labels`] struct can be exported to a JSONL file.
+//! The [`Labels`](crate::Labels) struct can be exported to a JSONL file.
 //!
-//! The [`Labels`] struct can be imported from a JSONL file.
+//! The `Labels` struct can be imported from a JSONL file.
 //!
 //! ### Example Import:
 //! ```rust
@@ -28,7 +28,7 @@
 //! let jsonl = labels.export().unwrap();
 //! ```
 //!
-//! You can encrypt and decrypt the [`Labels`] into/from the [`encryption::EncryptedLabels`] struct using the `encryption` feature.
+//! You can encrypt and decrypt the `Labels` into/from the [`encryption::EncryptedLabels`](crate::encryption::EncryptedLabels) struct using the `encryption` feature.
 //!
 //! ### Example encryption:
 //! ```rust
