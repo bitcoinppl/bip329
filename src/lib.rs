@@ -1,14 +1,10 @@
 //! A library for working with [BIP329 labels](https://github.com/bitcoin/bips/blob/master/bip-00329.mediawiki).
 //!
-//! This library provides a way to work with BIP329 labels in a Rust program.
-//!
-//! The main data structure is the [`Labels`](crate::Labels) struct, which is a list of [`Label`](crate::Label) structs.
-//!
-//! The [`Label`](crate::Label) enum is a discriminated union of all the different types of labels.
-//!
-//! The [`Labels`](crate::Labels) struct can be exported to a JSONL file.
-//!
-//! The `Labels` struct can be imported from a JSONL file.
+//! - The main data structure is the [`Labels`](crate::Labels) struct, which is a list of [`Label`](crate::Label) structs.
+//! - The [`Label`](crate::Label) enum containing all the different types of labels.
+//! - The [`Labels`](crate::Labels) struct can be imported/exported to/from a JSONL file.
+//! - Supports encryption and decryption using the [`encryption`](crate::encryption) module.
+//! - Supports the [`uniffi`](https://github.com/mozilla/uniffi-rs) feature, for easy integration with other languages.
 //!
 //! ### Example Import:
 //! ```rust
@@ -27,8 +23,6 @@
 //! // Create a JSONL string
 //! let jsonl = labels.export().unwrap();
 //! ```
-//!
-//! You can encrypt and decrypt the `Labels` into/from the [`encryption::EncryptedLabels`](crate::encryption::EncryptedLabels) struct using the `encryption` feature.
 //!
 //! ### Example encryption:
 //! ```rust

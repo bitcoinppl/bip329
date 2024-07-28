@@ -11,18 +11,13 @@
 
 A library for working with [BIP329 labels](https://github.com/bitcoin/bips/blob/master/bip-00329.mediawiki).
 
-This library provides a way to work with BIP329 labels in a Rust program.
-
-The main data structure is the [`Labels`](https://docs.rs/bip329/latest/bip329/struct.Labels.html) struct, which is a list of [`Label`](https://docs.rs/bip329/latest/bip329/enum.Label.html) structs.
-
-The [`Label`](https://docs.rs/bip329/latest/bip329/enum.Label.html) enum is a discriminated union of all the different types of labels.
-
-The [`Labels`](https://docs.rs/bip329/latest/bip329/struct.Labels.html) struct can be exported to a JSONL file.
-
-The `Labels` struct can be imported from a JSONL file.
+- The main data structure is the [`Labels`](https://docs.rs/bip329/latest/bip329/struct.Labels.html) struct, which is a list of [`Label`](https://docs.rs/bip329/latest/bip329/enum.Label.html) structs.
+- The [`Label`](https://docs.rs/bip329/latest/bip329/enum.Label.html) enum containing all the different types of labels.
+- The [`Labels`](https://docs.rs/bip329/latest/bip329/struct.Labels.html) struct can be imported/exported to/from a JSONL file.
+- Supports encryption and decryption using the [`encryption`](https://docs.rs/bip329/latest/bip329/encryption/) module.
+- Supports the [`uniffi`](https://github.com/mozilla/uniffi-rs) feature, for easy integration with other languages.
 
 #### Example Import:
-
 ```rust
 use bip329::Labels;
 
@@ -30,7 +25,6 @@ let labels = Labels::try_from_file("tests/data/labels.jsonl").unwrap();
 ```
 
 #### Example Export:
-
 ```rust
 use bip329::Labels;
 
@@ -41,10 +35,7 @@ let labels = Labels::try_from_file("tests/data/labels.jsonl").unwrap();
 let jsonl = labels.export().unwrap();
 ```
 
-You can encrypt and decrypt the `Labels` into/from the [`encryption::EncryptedLabels`](https://docs.rs/bip329/latest/bip329/encryption/struct.EncryptedLabels.html) struct using the `encryption` feature.
-
 #### Example encryption:
-
 ```rust
 use bip329::{Labels, encryption::EncryptedLabels};
 
