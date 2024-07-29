@@ -30,7 +30,10 @@
 //!
 //! let labels = Labels::try_from_file("tests/data/labels.jsonl").unwrap();
 //! let encrypted = EncryptedLabels::encrypt(&labels, "passphrase").unwrap();
-//! let decrypted: Labels = encrypted.decrypt("passphrase").unwrap();
+//!
+//! let encrypted = EncryptedLabels::read_from_file("tests/data/encrypted_labels.age").unwrap();
+//! let decrypted = encrypted.decrypt("passphrase").unwrap();
+//! assert_eq!(labels, decrypted);
 //! ```
 //!
 pub mod error;
