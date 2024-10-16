@@ -9,7 +9,7 @@
 
 <!-- cargo-rdme start -->
 
-A library for working with [BIP329 labels](https://github.com/bitcoin/bips/blob/master/bip-00329.mediawiki).
+A library for working with [BIP329 labels](https://github.com/bitcoin/bips/blob/master/bip-0329.mediawiki).
 
 - The main data structure is the [`Labels`](https://docs.rs/bip329/latest/bip329/struct.Labels.html) struct, which is a list of [`Label`](https://docs.rs/bip329/latest/bip329/enum.Label.html) structs.
 - The [`Label`](https://docs.rs/bip329/latest/bip329/enum.Label.html) enum containing all the different types of labels.

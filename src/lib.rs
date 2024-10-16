@@ -1,4 +1,4 @@
-//! A library for working with [BIP329 labels](https://github.com/bitcoin/bips/blob/master/bip-00329.mediawiki).
+//! A library for working with [BIP329 labels](https://github.com/bitcoin/bips/blob/master/bip-0329.mediawiki).
 //!
 //! - The main data structure is the [`Labels`](crate::Labels) struct, which is a list of [`Label`](crate::Label) structs.
 //! - The [`Label`](crate::Label) enum containing all the different types of labels.
