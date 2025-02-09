@@ -44,7 +44,13 @@ pub mod encryption;
 mod label;
 mod serde_util;
 
-use serde::{Deserialize, Serialize};
+use std::{num::ParseIntError, str::FromStr};
+
+use bitcoin::{address::NetworkUnchecked, Address};
+use serde::{
+    de::{Error, Visitor},
+    Deserialize, Serialize,
+};
 
 /// A list of labels.
 #[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
@@ -77,7 +83,7 @@ pub enum Label {
 #[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct TransactionRecord {
     #[serde(rename = "ref")]
-    pub ref_: String,
+    pub ref_: bitcoin::Txid,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -89,7 +95,7 @@ pub struct TransactionRecord {
 #[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct AddressRecord {
     #[serde(rename = "ref")]
-    pub ref_: String,
+    pub ref_: Address<NetworkUnchecked>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
 }
@@ -110,7 +116,7 @@ pub struct PublicKeyRecord {
 #[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct InputRecord {
     #[serde(rename = "ref")]
-    pub ref_: String,
+    pub ref_: InOutId,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
 }
@@ -120,7 +126,7 @@ pub struct InputRecord {
 #[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct OutputRecord {
     #[serde(rename = "ref")]
-    pub ref_: String,
+    pub ref_: InOutId,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
@@ -146,6 +152,74 @@ impl OutputRecord {
     /// Defaults to being spendable if no spendable field is present
     pub fn spendable(&self) -> bool {
         self.spendable.unwrap_or(true)
+    }
+}
+
+/// The ID for an input or output, which is a tuple of the transaction ID and the index of the input or output.
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+pub struct InOutId {
+    pub txid: bitcoin::Txid,
+    pub index: u32,
+}
+
+/// The ID for an input or output, which is a tuple of the transaction ID and the index of the input or output.
+#[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Error))]
+pub enum InOutIdError {
+    #[error("Invalid InOutId format")]
+    InvalidFormat,
+    #[error("Invalid Txid {0:?}")]
+    InvalidTxid(bitcoin::hex::HexToArrayError),
+    #[error("Invalid index: {0:?}")]
+    InvalidIndex(ParseIntError),
+}
+
+impl Serialize for InOutId {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.collect_str(&format_args!("{}:{}", self.txid, self.index))
+    }
+}
+
+impl FromStr for InOutId {
+    type Err = InOutIdError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut parts = s.splitn(2, ':');
+
+        let txid = parts.next().ok_or(InOutIdError::InvalidFormat)?;
+        let index = parts.next().ok_or(InOutIdError::InvalidFormat)?;
+
+        let txid = bitcoin::Txid::from_str(txid).map_err(InOutIdError::InvalidTxid)?;
+        let index = index.parse().map_err(InOutIdError::InvalidIndex)?;
+
+        Ok(InOutId { txid, index })
+    }
+}
+
+impl<'de> Deserialize<'de> for InOutId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct InOutIdVisitor;
+
+        impl Visitor<'_> for InOutIdVisitor {
+            type Value = InOutId;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("a string in format 'txid:index'")
+            }
+
+            fn visit_str<E: Error>(self, value: &str) -> Result<Self::Value, E> {
+                InOutId::from_str(value).map_err(E::custom)
+            }
+        }
+
+        deserializer.deserialize_str(InOutIdVisitor)
     }
 }
 

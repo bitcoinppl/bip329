@@ -101,6 +101,9 @@ impl DerefMut for Labels {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
+    use bitcoin::Txid;
     use serde_json::from_str;
 
     use crate::*;
@@ -131,7 +134,8 @@ mod tests {
         {
             assert_eq!(
                 ref_,
-                "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd"
+                &Txid::from_str("f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd")
+                    .unwrap()
             );
             assert_eq!(label, &Some("Transaction".to_string()));
             assert_eq!(origin, &Some("wpkh([d34db33f/84'/0'/0'])".to_string()));
@@ -141,7 +145,10 @@ mod tests {
 
         // Test Address
         if let Label::Address(AddressRecord { ref_, label }) = &records[1] {
-            assert_eq!(ref_, "bc1q34aq5drpuwy3wgl9lhup9892qp6svr8ldzyy7c");
+            assert_eq!(
+                ref_,
+                &Address::from_str("bc1q34aq5drpuwy3wgl9lhup9892qp6svr8ldzyy7c").unwrap()
+            );
             assert_eq!(label, &Some("Address".to_string()));
         } else {
             panic!("Expected Address");
@@ -162,7 +169,10 @@ mod tests {
         if let Label::Input(InputRecord { ref_, label }) = &records[3] {
             assert_eq!(
                 ref_,
-                "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd:0"
+                &InOutId::from_str(
+                    "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd:0"
+                )
+                .unwrap()
             );
             assert_eq!(label, &Some("Input".to_string()));
         } else {
@@ -178,7 +188,10 @@ mod tests {
         {
             assert_eq!(
                 ref_,
-                "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd:1"
+                &InOutId::from_str(
+                    "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd:1"
+                )
+                .unwrap()
             );
             assert_eq!(label, &Some("Output".to_string()));
             assert_eq!(spendable, &Some(false));
@@ -203,7 +216,8 @@ mod tests {
         {
             assert_eq!(
                 ref_,
-                "f546156d9044844e02b181026a1a407abfca62e7ea1159f87bbeaa77b4286c74"
+                &Txid::from_str("f546156d9044844e02b181026a1a407abfca62e7ea1159f87bbeaa77b4286c74")
+                    .unwrap()
             );
             assert_eq!(label, &Some("Account #1 Transaction".to_string()));
             assert_eq!(origin, &Some("wpkh([d34db33f/84'/0'/1'])".to_string()));
@@ -225,7 +239,10 @@ mod tests {
         {
             assert_eq!(
                 ref_,
-                "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd:1"
+                &InOutId::from_str(
+                    "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd:1"
+                )
+                .unwrap()
             );
             assert_eq!(*label, Some("Output".to_string()));
             assert_eq!(*spendable, None);
