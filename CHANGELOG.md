@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Update dependencies
+- Use bitcoin types as the `ref` field for `Transaction`, `Address`, `Input`, and `Output` label
 
 ## [0.1.1] - 2023-07-28
 
