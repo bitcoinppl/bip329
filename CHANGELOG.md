@@ -4,6 +4,7 @@
 
 - Update dependencies
 - Use bitcoin types as the `ref` field for `Transaction`, `Address`, `Input`, and `Output` label
+- Remove support for `uniffi`
 
 ## [0.1.1] - 2023-07-28
 

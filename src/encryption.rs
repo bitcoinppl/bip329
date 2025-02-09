@@ -11,9 +11,6 @@ use crate::{error::EncryptionError, Labels};
 #[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct EncryptedLabels(Vec<u8>);
 
-#[cfg(feature = "uniffi")]
-uniffi::custom_newtype!(EncryptedLabels, Vec<u8>);
-
 impl EncryptedLabels {
     /// Encrypt the Labels struct using the given passphrase.
     pub fn encrypt(labels: &Labels, passphrase: &str) -> Result<Self, EncryptionError> {

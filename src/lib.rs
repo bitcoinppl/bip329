@@ -56,13 +56,9 @@ use serde::{
 #[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Labels(Vec<Label>);
 
-#[cfg(feature = "uniffi")]
-uniffi::custom_newtype!(Labels, Vec<Label>);
-
 /// The main data structure for BIP329 labels.
 #[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(tag = "type")]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 pub enum Label {
     #[serde(rename = "tx")]
     Transaction(TransactionRecord),
@@ -80,7 +76,6 @@ pub enum Label {
 
 /// A transaction label.
 #[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct TransactionRecord {
     #[serde(rename = "ref")]
     pub ref_: bitcoin::Txid,
@@ -92,7 +87,6 @@ pub struct TransactionRecord {
 
 /// An address label.
 #[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct AddressRecord {
     #[serde(rename = "ref")]
     pub ref_: Address<NetworkUnchecked>,
@@ -102,7 +96,6 @@ pub struct AddressRecord {
 
 /// A public key label.
 #[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct PublicKeyRecord {
     #[serde(rename = "ref")]
     pub ref_: String,
@@ -113,7 +106,6 @@ pub struct PublicKeyRecord {
 
 /// An input label.
 #[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct InputRecord {
     #[serde(rename = "ref")]
     pub ref_: InOutId,
@@ -123,7 +115,6 @@ pub struct InputRecord {
 
 /// An output label.
 #[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct OutputRecord {
     #[serde(rename = "ref")]
     pub ref_: InOutId,
@@ -141,7 +132,6 @@ pub struct OutputRecord {
 
 /// An extended public key label.
 #[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct ExtendedPublicKeyRecord {
     #[serde(rename = "ref")]
     pub ref_: String,
@@ -157,7 +147,6 @@ impl OutputRecord {
 
 /// The ID for an input or output, which is a tuple of the transaction ID and the index of the input or output.
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct InOutId {
     pub txid: bitcoin::Txid,
     pub index: u32,
@@ -165,7 +154,6 @@ pub struct InOutId {
 
 /// The ID for an input or output, which is a tuple of the transaction ID and the index of the input or output.
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Error))]
 pub enum InOutIdError {
     #[error("Invalid InOutId format")]
     InvalidFormat,
@@ -222,6 +210,3 @@ impl<'de> Deserialize<'de> for InOutId {
         deserializer.deserialize_str(InOutIdVisitor)
     }
 }
-
-#[cfg(feature = "uniffi")]
-uniffi::setup_scaffolding!();

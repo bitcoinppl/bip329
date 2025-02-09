@@ -1,8 +1,5 @@
 //! Module for all error types used in this crate.
 
-#[cfg(feature = "uniffi")]
-pub mod ffi;
-
 /// Errors that can occur when parsing a label.
 #[derive(Debug, thiserror::Error)]
 pub enum ParseError {
