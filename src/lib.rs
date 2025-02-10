@@ -41,12 +41,13 @@ pub mod error;
 #[cfg(feature = "encryption")]
 pub mod encryption;
 
+pub mod from;
 mod label;
 mod serde_util;
 
 use std::{num::ParseIntError, str::FromStr};
 
-use bitcoin::{address::NetworkUnchecked, Address};
+use bitcoin::{address::NetworkUnchecked, Address, Txid};
 use serde::{
     de::{Error, Visitor},
     Deserialize, Serialize,
@@ -176,10 +177,15 @@ impl FromStr for InOutId {
     type Err = InOutIdError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut parts = s.splitn(2, ':');
+        // id is 32 bytes encoded in hex == 64
+        if s.len() < 64 {
+            return Err(InOutIdError::InvalidFormat);
+        }
 
-        let txid = parts.next().ok_or(InOutIdError::InvalidFormat)?;
-        let index = parts.next().ok_or(InOutIdError::InvalidFormat)?;
+        // txid is the first 64 chars == 32 bytes
+        let txid = &s[..64];
+        // 64 == `:` so start from 65 for index
+        let index = &s[65..];
 
         let txid = bitcoin::Txid::from_str(txid).map_err(InOutIdError::InvalidTxid)?;
         let index = index.parse().map_err(InOutIdError::InvalidIndex)?;
@@ -208,5 +214,31 @@ impl<'de> Deserialize<'de> for InOutId {
         }
 
         deserializer.deserialize_str(InOutIdVisitor)
+    }
+}
+
+impl InOutId {
+    pub fn new(id: Txid, index: u32) -> Self {
+        Self { txid: id, index }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_in_out_id_from_str() {
+        let id =
+            InOutId::from_str("ddf793869ba325d06882b78a8c599ef8d512d01d716a8fdd30e51a9e268d6820:1")
+                .unwrap();
+
+        assert_eq!(
+            id.txid,
+            Txid::from_str("ddf793869ba325d06882b78a8c599ef8d512d01d716a8fdd30e51a9e268d6820")
+                .unwrap()
+        );
+
+        assert_eq!(id.index, 1);
     }
 }
