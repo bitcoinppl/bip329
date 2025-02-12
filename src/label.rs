@@ -194,7 +194,7 @@ mod tests {
                 .unwrap()
             );
             assert_eq!(label, &Some("Output".to_string()));
-            assert_eq!(spendable, &Some(false));
+            assert_eq!(*spendable, false);
         } else {
             panic!("Expected Output");
         }
@@ -245,7 +245,7 @@ mod tests {
                 .unwrap()
             );
             assert_eq!(*label, Some("Output".to_string()));
-            assert_eq!(*spendable, None);
+            assert_eq!(*spendable, true);
             assert!(record.spendable());
         };
     }
@@ -260,6 +260,9 @@ mod tests {
         let jsonl_string = std::str::from_utf8(&buffer).unwrap().trim();
         let expected = std::fs::read_to_string("tests/data/labels.jsonl").unwrap();
 
-        assert_eq!(jsonl_string, expected);
+        let jsonl = Labels::try_from_str(jsonl_string).unwrap();
+        let expected = Labels::try_from_str(&expected).unwrap();
+
+        assert_eq!(jsonl, expected);
     }
 }

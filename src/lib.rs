@@ -110,7 +110,6 @@ pub struct PublicKeyRecord {
 pub struct InputRecord {
     #[serde(rename = "ref")]
     pub ref_: InOutId,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
 }
 
@@ -120,15 +119,13 @@ pub struct OutputRecord {
     #[serde(rename = "ref")]
     pub ref_: InOutId,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
 
     #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
+        default = "default_true",
         deserialize_with = "serde_util::deserialize_string_or_bool"
     )]
-    pub spendable: Option<bool>,
+    pub spendable: bool,
 }
 
 /// An extended public key label.
@@ -142,7 +139,7 @@ pub struct ExtendedPublicKeyRecord {
 impl OutputRecord {
     /// Defaults to being spendable if no spendable field is present
     pub fn spendable(&self) -> bool {
-        self.spendable.unwrap_or(true)
+        self.spendable
     }
 }
 
@@ -241,4 +238,8 @@ mod tests {
 
         assert_eq!(id.index, 1);
     }
+}
+
+fn default_true() -> bool {
+    true
 }

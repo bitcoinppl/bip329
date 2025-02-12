@@ -1,5 +1,5 @@
 use serde::{Deserialize as _, Deserializer};
-pub(crate) fn deserialize_string_or_bool<'de, D>(deserializer: D) -> Result<Option<bool>, D::Error>
+pub(crate) fn deserialize_string_or_bool<'de, D>(deserializer: D) -> Result<bool, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -10,14 +10,11 @@ where
         Bool(bool),
     }
 
-    let opt = Option::deserialize(deserializer)?;
-
-    match opt {
-        None => Ok(None),
-        Some(StringOrBool::Bool(b)) => Ok(Some(b)),
-        Some(StringOrBool::String(s)) => match s.to_ascii_lowercase().as_str() {
-            "true" => Ok(Some(true)),
-            "false" => Ok(Some(false)),
+    match StringOrBool::deserialize(deserializer)? {
+        StringOrBool::Bool(b) => Ok(b),
+        StringOrBool::String(s) => match s.to_ascii_lowercase().as_str() {
+            "true" => Ok(true),
+            "false" => Ok(false),
             string => {
                 let msg = format!("Invalid boolean string: {string}");
                 Err(serde::de::Error::custom(msg))
