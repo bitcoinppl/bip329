@@ -18,6 +18,7 @@ impl Labels {
     /// Create a new Labels struct from a string.
     pub fn try_from_str(labels: &str) -> Result<Self, ParseError> {
         let labels = labels
+            .trim()
             .lines()
             .map(serde_json::from_str)
             .collect::<Result<Vec<Label>, _>>()?;
@@ -75,6 +76,11 @@ impl Labels {
     pub fn into_vec(self) -> Vec<Label> {
         self.0
     }
+
+    /// Get an iterator over the Labels struct.
+    pub fn iter(&self) -> impl Iterator<Item = &Label> {
+        self.0.iter()
+    }
 }
 
 impl Label {
@@ -96,6 +102,24 @@ impl Deref for Labels {
 impl DerefMut for Labels {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
+    }
+}
+
+impl From<Vec<Label>> for Labels {
+    fn from(value: Vec<Label>) -> Self {
+        Self(value)
+    }
+}
+
+impl From<Labels> for Vec<Label> {
+    fn from(value: Labels) -> Self {
+        value.0
+    }
+}
+
+impl Default for Labels {
+    fn default() -> Self {
+        Self::new(Default::default())
     }
 }
 
