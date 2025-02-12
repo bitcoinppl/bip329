@@ -220,6 +220,10 @@ impl InOutId {
     }
 }
 
+fn default_true() -> bool {
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -238,8 +242,4 @@ mod tests {
 
         assert_eq!(id.index, 1);
     }
-}
-
-fn default_true() -> bool {
-    true
 }

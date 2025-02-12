@@ -218,7 +218,7 @@ mod tests {
                 .unwrap()
             );
             assert_eq!(label, &Some("Output".to_string()));
-            assert_eq!(*spendable, false);
+            assert!(!*spendable);
         } else {
             panic!("Expected Output");
         }
@@ -269,7 +269,7 @@ mod tests {
                 .unwrap()
             );
             assert_eq!(*label, Some("Output".to_string()));
-            assert_eq!(*spendable, true);
+            assert!(*spendable);
             assert!(record.spendable());
         };
     }
