@@ -19,6 +19,7 @@
 - Convenient `From` impls for `Label`
 - IntoIterator for `Labels`
 - `iter` function for `Labels`
+- Add functions to get transaction label
 
 ## [0.1.2] - 2023-07-28
 
