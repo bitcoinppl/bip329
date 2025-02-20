@@ -1,6 +1,6 @@
 use crate::{
-    error::{ExportError, ParseError},
     Label, Labels, TransactionRecord,
+    error::{ExportError, ParseError},
 };
 use std::{
     fs::File,
@@ -248,7 +248,10 @@ mod tests {
 
         // Test ExtendedPublicKey
         if let Label::ExtendedPublicKey(ExtendedPublicKeyRecord { ref_, label }) = &records[5] {
-            assert_eq!(ref_, "xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8");
+            assert_eq!(
+                ref_,
+                "xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8"
+            );
             assert_eq!(label, &Some("Extended Public Key".to_string()));
         } else {
             panic!("Expected ExtendedPublicKey");

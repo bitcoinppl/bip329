@@ -47,10 +47,10 @@ mod serde_util;
 
 use std::{num::ParseIntError, str::FromStr};
 
-use bitcoin::{address::NetworkUnchecked, Address, Txid};
+use bitcoin::{Address, Txid, address::NetworkUnchecked};
 use serde::{
-    de::{Error, Visitor},
     Deserialize, Serialize,
+    de::{Error, Visitor},
 };
 
 /// A list of labels.
