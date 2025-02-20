@@ -1,6 +1,6 @@
 use crate::{
     error::{ExportError, ParseError},
-    Label, Labels,
+    Label, Labels, TransactionRecord,
 };
 use std::{
     fs::File,
@@ -41,6 +41,29 @@ impl Labels {
             .collect::<Result<Vec<Label>, _>>()?;
 
         Ok(Self::new(labels))
+    }
+
+    /// Get the full transaction label record
+    pub fn transaction_label_record(&self) -> Option<&TransactionRecord> {
+        self.0.iter().find_map(|label: &Label| {
+            if let Label::Transaction(record) = label {
+                return Some(record);
+            }
+
+            None
+        })
+    }
+
+    /// Get the transaction label
+    pub fn transaction_label(&self) -> Option<&str> {
+        let record = self.transaction_label_record()?;
+        let label = record.label.as_ref()?.as_str();
+
+        if label.is_empty() {
+            return None;
+        }
+
+        Some(label)
     }
 
     /// Export the Labels struct to a string.
