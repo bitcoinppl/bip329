@@ -1,21 +1,15 @@
 //! Module for encrypting and decrypting labels.
 
-use std::{
-    io::{Read as _, Write as _},
-    path::Path,
-};
+use std::{io::Write as _, path::Path};
 
-use age::secrecy::Secret;
+use age::secrecy::SecretString;
 use serde::{Deserialize, Serialize};
 
-use crate::{error::EncryptionError, Labels};
+use crate::{Labels, error::EncryptionError};
 
 /// A list of encrypted labels.
 #[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct EncryptedLabels(Vec<u8>);
-
-#[cfg(feature = "uniffi")]
-uniffi::custom_newtype!(EncryptedLabels, Vec<u8>);
 
 impl EncryptedLabels {
     /// Encrypt the Labels struct using the given passphrase.
@@ -24,7 +18,7 @@ impl EncryptedLabels {
 
         let encrypted = {
             let encryptor =
-                age::Encryptor::with_user_passphrase(Secret::new(passphrase.to_owned()));
+                age::Encryptor::with_user_passphrase(SecretString::new(passphrase.into()));
 
             let mut encrypted = vec![];
             let mut writer = encryptor.wrap_output(&mut encrypted)?;
@@ -62,16 +56,9 @@ impl EncryptedLabels {
         let encrypted = &self.0;
 
         let decrypted = {
-            let decryptor = match age::Decryptor::new(&encrypted[..])? {
-                age::Decryptor::Passphrase(d) => d,
-                _ => unreachable!(),
-            };
-
-            let mut decrypted = vec![];
-            let mut reader = decryptor.decrypt(&Secret::new(passphrase.to_owned()), None)?;
-            reader.read_to_end(&mut decrypted)?;
-
-            decrypted
+            let secret_string = SecretString::new(passphrase.into());
+            let identity = age::scrypt::Identity::new(secret_string);
+            age::decrypt(&identity, encrypted)?
         };
 
         let labels_string = String::from_utf8(decrypted)?;
@@ -102,7 +89,7 @@ impl EncryptedLabels {
 
 #[cfg(test)]
 mod tests {
-    use crate::{encryption::EncryptedLabels, Labels};
+    use crate::{Labels, encryption::EncryptedLabels};
 
     #[test]
     fn test_encryption() {

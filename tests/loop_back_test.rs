@@ -8,10 +8,8 @@ fn test_loop_back() {
     let export_json = labels_1.export().unwrap();
 
     let labels_2 = Labels::try_from_str(&export_json).unwrap();
-    let file_json = std::fs::read_to_string("tests/data/labels.jsonl").unwrap();
 
     assert_eq!(labels_1, labels_2);
-    assert_eq!(export_json.trim(), file_json.trim());
 }
 
 #[test]

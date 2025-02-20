@@ -41,22 +41,25 @@ pub mod error;
 #[cfg(feature = "encryption")]
 pub mod encryption;
 
+pub mod from;
 mod label;
 mod serde_util;
 
-use serde::{Deserialize, Serialize};
+use std::{num::ParseIntError, str::FromStr};
+
+use bitcoin::{Address, Txid, address::NetworkUnchecked};
+use serde::{
+    Deserialize, Serialize,
+    de::{Error, Visitor},
+};
 
 /// A list of labels.
 #[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Labels(Vec<Label>);
 
-#[cfg(feature = "uniffi")]
-uniffi::custom_newtype!(Labels, Vec<Label>);
-
 /// The main data structure for BIP329 labels.
 #[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(tag = "type")]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 pub enum Label {
     #[serde(rename = "tx")]
     Transaction(TransactionRecord),
@@ -74,10 +77,9 @@ pub enum Label {
 
 /// A transaction label.
 #[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct TransactionRecord {
     #[serde(rename = "ref")]
-    pub ref_: String,
+    pub ref_: bitcoin::Txid,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -86,17 +88,15 @@ pub struct TransactionRecord {
 
 /// An address label.
 #[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct AddressRecord {
     #[serde(rename = "ref")]
-    pub ref_: String,
+    pub ref_: Address<NetworkUnchecked>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
 }
 
 /// A public key label.
 #[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct PublicKeyRecord {
     #[serde(rename = "ref")]
     pub ref_: String,
@@ -107,35 +107,29 @@ pub struct PublicKeyRecord {
 
 /// An input label.
 #[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct InputRecord {
     #[serde(rename = "ref")]
-    pub ref_: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ref_: InOutId,
     pub label: Option<String>,
 }
 
 /// An output label.
 #[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct OutputRecord {
     #[serde(rename = "ref")]
-    pub ref_: String,
+    pub ref_: InOutId,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
 
     #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
+        default = "default_true",
         deserialize_with = "serde_util::deserialize_string_or_bool"
     )]
-    pub spendable: Option<bool>,
+    pub spendable: bool,
 }
 
 /// An extended public key label.
 #[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct ExtendedPublicKeyRecord {
     #[serde(rename = "ref")]
     pub ref_: String,
@@ -145,9 +139,107 @@ pub struct ExtendedPublicKeyRecord {
 impl OutputRecord {
     /// Defaults to being spendable if no spendable field is present
     pub fn spendable(&self) -> bool {
-        self.spendable.unwrap_or(true)
+        self.spendable
     }
 }
 
-#[cfg(feature = "uniffi")]
-uniffi::setup_scaffolding!();
+/// The ID for an input or output, which is a tuple of the transaction ID and the index of the input or output.
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct InOutId {
+    pub txid: bitcoin::Txid,
+    pub index: u32,
+}
+
+/// The ID for an input or output, which is a tuple of the transaction ID and the index of the input or output.
+#[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
+pub enum InOutIdError {
+    #[error("Invalid InOutId format")]
+    InvalidFormat,
+    #[error("Invalid Txid {0:?}")]
+    InvalidTxid(bitcoin::hex::HexToArrayError),
+    #[error("Invalid index: {0:?}")]
+    InvalidIndex(ParseIntError),
+}
+
+impl Serialize for InOutId {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.collect_str(&format_args!("{}:{}", self.txid, self.index))
+    }
+}
+
+impl FromStr for InOutId {
+    type Err = InOutIdError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        // id is 32 bytes encoded in hex == 64
+        if s.len() < 64 {
+            return Err(InOutIdError::InvalidFormat);
+        }
+
+        // txid is the first 64 chars == 32 bytes
+        let txid = &s[..64];
+        // 64 == `:` so start from 65 for index
+        let index = &s[65..];
+
+        let txid = bitcoin::Txid::from_str(txid).map_err(InOutIdError::InvalidTxid)?;
+        let index = index.parse().map_err(InOutIdError::InvalidIndex)?;
+
+        Ok(InOutId { txid, index })
+    }
+}
+
+impl<'de> Deserialize<'de> for InOutId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct InOutIdVisitor;
+
+        impl Visitor<'_> for InOutIdVisitor {
+            type Value = InOutId;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("a string in format 'txid:index'")
+            }
+
+            fn visit_str<E: Error>(self, value: &str) -> Result<Self::Value, E> {
+                InOutId::from_str(value).map_err(E::custom)
+            }
+        }
+
+        deserializer.deserialize_str(InOutIdVisitor)
+    }
+}
+
+impl InOutId {
+    pub fn new(id: Txid, index: u32) -> Self {
+        Self { txid: id, index }
+    }
+}
+
+fn default_true() -> bool {
+    true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_in_out_id_from_str() {
+        let id =
+            InOutId::from_str("ddf793869ba325d06882b78a8c599ef8d512d01d716a8fdd30e51a9e268d6820:1")
+                .unwrap();
+
+        assert_eq!(
+            id.txid,
+            Txid::from_str("ddf793869ba325d06882b78a8c599ef8d512d01d716a8fdd30e51a9e268d6820")
+                .unwrap()
+        );
+
+        assert_eq!(id.index, 1);
+    }
+}

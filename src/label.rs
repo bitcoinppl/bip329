@@ -1,6 +1,6 @@
 use crate::{
+    Label, Labels, TransactionRecord,
     error::{ExportError, ParseError},
-    Label, Labels,
 };
 use std::{
     fs::File,
@@ -18,6 +18,7 @@ impl Labels {
     /// Create a new Labels struct from a string.
     pub fn try_from_str(labels: &str) -> Result<Self, ParseError> {
         let labels = labels
+            .trim()
             .lines()
             .map(serde_json::from_str)
             .collect::<Result<Vec<Label>, _>>()?;
@@ -40,6 +41,29 @@ impl Labels {
             .collect::<Result<Vec<Label>, _>>()?;
 
         Ok(Self::new(labels))
+    }
+
+    /// Get the full transaction label record
+    pub fn transaction_label_record(&self) -> Option<&TransactionRecord> {
+        self.0.iter().find_map(|label: &Label| {
+            if let Label::Transaction(record) = label {
+                return Some(record);
+            }
+
+            None
+        })
+    }
+
+    /// Get the transaction label
+    pub fn transaction_label(&self) -> Option<&str> {
+        let record = self.transaction_label_record()?;
+        let label = record.label.as_ref()?.as_str();
+
+        if label.is_empty() {
+            return None;
+        }
+
+        Some(label)
     }
 
     /// Export the Labels struct to a string.
@@ -75,6 +99,11 @@ impl Labels {
     pub fn into_vec(self) -> Vec<Label> {
         self.0
     }
+
+    /// Get an iterator over the Labels struct.
+    pub fn iter(&self) -> impl Iterator<Item = &Label> {
+        self.0.iter()
+    }
 }
 
 impl Label {
@@ -99,8 +128,29 @@ impl DerefMut for Labels {
     }
 }
 
+impl From<Vec<Label>> for Labels {
+    fn from(value: Vec<Label>) -> Self {
+        Self(value)
+    }
+}
+
+impl From<Labels> for Vec<Label> {
+    fn from(value: Labels) -> Self {
+        value.0
+    }
+}
+
+impl Default for Labels {
+    fn default() -> Self {
+        Self::new(Default::default())
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
+    use bitcoin::Txid;
     use serde_json::from_str;
 
     use crate::*;
@@ -131,7 +181,8 @@ mod tests {
         {
             assert_eq!(
                 ref_,
-                "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd"
+                &Txid::from_str("f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd")
+                    .unwrap()
             );
             assert_eq!(label, &Some("Transaction".to_string()));
             assert_eq!(origin, &Some("wpkh([d34db33f/84'/0'/0'])".to_string()));
@@ -141,7 +192,10 @@ mod tests {
 
         // Test Address
         if let Label::Address(AddressRecord { ref_, label }) = &records[1] {
-            assert_eq!(ref_, "bc1q34aq5drpuwy3wgl9lhup9892qp6svr8ldzyy7c");
+            assert_eq!(
+                ref_,
+                &Address::from_str("bc1q34aq5drpuwy3wgl9lhup9892qp6svr8ldzyy7c").unwrap()
+            );
             assert_eq!(label, &Some("Address".to_string()));
         } else {
             panic!("Expected Address");
@@ -162,7 +216,10 @@ mod tests {
         if let Label::Input(InputRecord { ref_, label }) = &records[3] {
             assert_eq!(
                 ref_,
-                "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd:0"
+                &InOutId::from_str(
+                    "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd:0"
+                )
+                .unwrap()
             );
             assert_eq!(label, &Some("Input".to_string()));
         } else {
@@ -178,17 +235,23 @@ mod tests {
         {
             assert_eq!(
                 ref_,
-                "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd:1"
+                &InOutId::from_str(
+                    "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd:1"
+                )
+                .unwrap()
             );
             assert_eq!(label, &Some("Output".to_string()));
-            assert_eq!(spendable, &Some(false));
+            assert!(!*spendable);
         } else {
             panic!("Expected Output");
         }
 
         // Test ExtendedPublicKey
         if let Label::ExtendedPublicKey(ExtendedPublicKeyRecord { ref_, label }) = &records[5] {
-            assert_eq!(ref_, "xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8");
+            assert_eq!(
+                ref_,
+                "xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8"
+            );
             assert_eq!(label, &Some("Extended Public Key".to_string()));
         } else {
             panic!("Expected ExtendedPublicKey");
@@ -203,7 +266,8 @@ mod tests {
         {
             assert_eq!(
                 ref_,
-                "f546156d9044844e02b181026a1a407abfca62e7ea1159f87bbeaa77b4286c74"
+                &Txid::from_str("f546156d9044844e02b181026a1a407abfca62e7ea1159f87bbeaa77b4286c74")
+                    .unwrap()
             );
             assert_eq!(label, &Some("Account #1 Transaction".to_string()));
             assert_eq!(origin, &Some("wpkh([d34db33f/84'/0'/1'])".to_string()));
@@ -225,10 +289,13 @@ mod tests {
         {
             assert_eq!(
                 ref_,
-                "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd:1"
+                &InOutId::from_str(
+                    "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd:1"
+                )
+                .unwrap()
             );
             assert_eq!(*label, Some("Output".to_string()));
-            assert_eq!(*spendable, None);
+            assert!(*spendable);
             assert!(record.spendable());
         };
     }
@@ -243,6 +310,9 @@ mod tests {
         let jsonl_string = std::str::from_utf8(&buffer).unwrap().trim();
         let expected = std::fs::read_to_string("tests/data/labels.jsonl").unwrap();
 
-        assert_eq!(jsonl_string, expected);
+        let jsonl = Labels::try_from_str(jsonl_string).unwrap();
+        let expected = Labels::try_from_str(&expected).unwrap();
+
+        assert_eq!(jsonl, expected);
     }
 }

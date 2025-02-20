@@ -1,8 +1,8 @@
 [package]
 authors = ["Praveen Perera <me@praveenperera.com>"]
 name = "bip329"
-version = "0.1.1"
-edition = "2021"
+version = "0.2.0"
+edition = "2024"
 description = "A library for working with BIP329 labels"
 license = "Apache-2.0"
 
@@ -15,22 +15,21 @@ documentation = "https://docs.rs/bip329"
 [features]
 default = ["encryption"]
 encryption = ["dep:age", "dep:hex"]
-uniffi = ["dep:uniffi"]
 
 [dependencies]
 # ser/de
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
+# bitcoin types
+bitcoin = { version = "0.32.0", features = ["serde"], default-features = false }
+
 # error handling
-thiserror = "1.0"
+thiserror = "2.0"
 
 # encryption (feature)
-age = { version = "0.10", optional = true }
+age = { version = "0.11", optional = true }
 hex = { version = "0.4", optional = true }
-
-# uniffi (feature)
-uniffi = { version = "0.28", optional = true }
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"
