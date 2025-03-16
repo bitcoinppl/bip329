@@ -2,7 +2,7 @@
 authors = ["Praveen Perera <me@praveenperera.com>"]
 name = "bip329"
 version = "0.2.0"
-edition = "2024"
+edition = "2021"
 description = "A library for working with BIP329 labels"
 license = "Apache-2.0"
 
