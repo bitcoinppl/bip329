@@ -3,6 +3,7 @@ use crate::{
     Label, LabelRef, Labels, TransactionRecord,
 };
 use std::{
+    collections::HashMap,
     fs::File,
     io::{BufRead as _, BufReader},
     ops::{Deref, DerefMut},
@@ -98,6 +99,14 @@ impl Labels {
     #[must_use]
     pub fn into_vec(self) -> Vec<Label> {
         self.0
+    }
+
+    /// Get the inner Vec of the Labels struct converted to a HashMap.
+    pub fn into_map(self) -> HashMap<String, Label> {
+        self.0
+            .into_iter()
+            .map(|l| (l.ref_().to_string(), l))
+            .collect()
     }
 
     /// Get an iterator over the Labels struct.
