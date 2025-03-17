@@ -1,4 +1,4 @@
-use bip329::{Labels, encryption::EncryptedLabels};
+use bip329::{encryption::EncryptedLabels, Labels};
 
 #[test]
 fn test_decryption() {
