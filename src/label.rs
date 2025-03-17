@@ -101,10 +101,14 @@ impl Labels {
         self.0
     }
 
-    /// Get the inner Vec of the Labels struct converted to a HashMap.
-    pub fn into_map(self) -> HashMap<String, Label> {
-        self.0
-            .into_iter()
+    /// Get the inner Vec of the Labels struct converted to a HashMap
+    pub fn into_map(self) -> HashMap<LabelRef, Label> {
+        self.into_iter().map(|l| (l.ref_(), l)).collect()
+    }
+
+    /// Get the inner Vec of the Labels struct, with string keys
+    pub fn into_string_map(self) -> HashMap<String, Label> {
+        self.into_iter()
             .map(|l| (l.ref_().to_string(), l))
             .collect()
     }
@@ -122,7 +126,19 @@ impl Label {
         Ok(label)
     }
 
-    /// Returns the ref as a LabelRef
+    /// return the `label` as a str
+    pub fn label(&self) -> Option<&str> {
+        match self {
+            Label::Transaction(record) => record.label.as_deref(),
+            Label::Address(record) => record.label.as_deref(),
+            Label::PublicKey(record) => record.label.as_deref(),
+            Label::Input(record) => record.label.as_deref(),
+            Label::Output(record) => record.label.as_deref(),
+            Label::ExtendedPublicKey(record) => record.label.as_deref(),
+        }
+    }
+
+    /// Get the reference of the label as a &str
     pub fn ref_(&self) -> LabelRef {
         match self {
             Label::Transaction(record) => LabelRef::Txid(record.ref_),
@@ -131,18 +147,6 @@ impl Label {
             Label::Input(record) => LabelRef::Input(record.ref_),
             Label::Output(record) => LabelRef::Output(record.ref_),
             Label::ExtendedPublicKey(record) => LabelRef::Xpub(record.ref_.clone()),
-        }
-    }
-
-    /// return the `label` value
-    pub fn label(&self) -> Option<String> {
-        match self {
-            Label::Transaction(record) => record.label.clone(),
-            Label::Address(record) => record.label.clone(),
-            Label::PublicKey(record) => record.label.clone(),
-            Label::Input(record) => record.label.clone(),
-            Label::Output(record) => record.label.clone(),
-            Label::ExtendedPublicKey(record) => record.label.clone(),
         }
     }
 }

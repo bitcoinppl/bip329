@@ -72,6 +72,7 @@ pub enum Label {
 }
 
 /// An enum representing all possible [`Label::ref_`]
+#[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum LabelRef {
     Txid(bitcoin::Txid),
     Address(bitcoin::Address<NetworkUnchecked>),
