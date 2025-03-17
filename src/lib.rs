@@ -47,6 +47,7 @@ mod serde_util;
 
 use bitcoin::{address::NetworkUnchecked, Address};
 use serde::{Deserialize, Serialize};
+use std::fmt::Display;
 
 /// A list of labels.
 #[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
@@ -68,6 +69,30 @@ pub enum Label {
     Output(OutputRecord),
     #[serde(rename = "xpub")]
     ExtendedPublicKey(ExtendedPublicKeyRecord),
+}
+
+/// An enum representing all possible [`Label::ref_`]
+#[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub enum LabelRef {
+    Txid(bitcoin::Txid),
+    Address(bitcoin::Address<NetworkUnchecked>),
+    PublicKey(String),
+    Input(bitcoin::OutPoint),
+    Output(bitcoin::OutPoint),
+    Xpub(String),
+}
+
+impl Display for LabelRef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self {
+            LabelRef::Txid(txid) => write!(f, "{txid}"),
+            LabelRef::Address(address) => write!(f, "{}", address.clone().assume_checked()),
+            LabelRef::PublicKey(pk) => write!(f, "{}", pk),
+            LabelRef::Input(outpoint) => write!(f, "{}", outpoint),
+            LabelRef::Output(outpoint) => write!(f, "{}", outpoint),
+            LabelRef::Xpub(xpub) => write!(f, "{}", xpub),
+        }
+    }
 }
 
 /// A transaction label.

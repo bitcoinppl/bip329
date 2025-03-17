@@ -1,8 +1,9 @@
 use crate::{
     error::{ExportError, ParseError},
-    Label, Labels, TransactionRecord,
+    Label, LabelRef, Labels, TransactionRecord,
 };
 use std::{
+    collections::HashMap,
     fs::File,
     io::{BufRead as _, BufReader},
     ops::{Deref, DerefMut},
@@ -100,6 +101,18 @@ impl Labels {
         self.0
     }
 
+    /// Get the inner Vec of the Labels struct converted to a HashMap
+    pub fn into_map(self) -> HashMap<LabelRef, Label> {
+        self.into_iter().map(|l| (l.ref_(), l)).collect()
+    }
+
+    /// Get the inner Vec of the Labels struct, with string keys
+    pub fn into_string_map(self) -> HashMap<String, Label> {
+        self.into_iter()
+            .map(|l| (l.ref_().to_string(), l))
+            .collect()
+    }
+
     /// Get an iterator over the Labels struct.
     pub fn iter(&self) -> impl Iterator<Item = &Label> {
         self.0.iter()
@@ -111,6 +124,30 @@ impl Label {
     pub fn try_from_str(label: &str) -> Result<Self, ParseError> {
         let label: Self = serde_json::from_str(label)?;
         Ok(label)
+    }
+
+    /// return the `label` as a str
+    pub fn label(&self) -> Option<&str> {
+        match self {
+            Label::Transaction(record) => record.label.as_deref(),
+            Label::Address(record) => record.label.as_deref(),
+            Label::PublicKey(record) => record.label.as_deref(),
+            Label::Input(record) => record.label.as_deref(),
+            Label::Output(record) => record.label.as_deref(),
+            Label::ExtendedPublicKey(record) => record.label.as_deref(),
+        }
+    }
+
+    /// Get the reference of the label as a &str
+    pub fn ref_(&self) -> LabelRef {
+        match self {
+            Label::Transaction(record) => LabelRef::Txid(record.ref_),
+            Label::Address(record) => LabelRef::Address(record.ref_.clone()),
+            Label::PublicKey(record) => LabelRef::PublicKey(record.ref_.clone()),
+            Label::Input(record) => LabelRef::Input(record.ref_),
+            Label::Output(record) => LabelRef::Output(record.ref_),
+            Label::ExtendedPublicKey(record) => LabelRef::Xpub(record.ref_.clone()),
+        }
     }
 }
 
