@@ -24,18 +24,24 @@
 //! let jsonl = labels.export().unwrap();
 //! ```
 //!
-//! ### Example encryption:
-//! ```rust
-//! use bip329::{Labels, encryption::EncryptedLabels};
-//!
-//! let labels = Labels::try_from_file("tests/data/labels.jsonl").unwrap();
-//! let encrypted = EncryptedLabels::encrypt(&labels, "passphrase").unwrap();
-//!
-//! let encrypted = EncryptedLabels::read_from_file("tests/data/encrypted_labels.age").unwrap();
-//! let decrypted = encrypted.decrypt("passphrase").unwrap();
-//! assert_eq!(labels, decrypted);
-//! ```
-//!
+/// ### Example encryption (requires the `encryption` feature):
+/// ```rust
+#[cfg_attr(
+    not(feature = "encryption"),
+    doc = "# // This example requires the `encryption` feature"
+)]
+///
+/// # #[cfg(feature = "encryption")]
+/// # {
+/// use bip329::{Labels, encryption::EncryptedLabels};
+/// let labels = Labels::try_from_file("tests/data/labels.jsonl").unwrap();
+/// let encrypted = EncryptedLabels::encrypt(&labels, "passphrase").unwrap();
+///
+/// let encrypted = EncryptedLabels::read_from_file("tests/data/encrypted_labels.age").unwrap();
+/// let decrypted = encrypted.decrypt("passphrase").unwrap();
+/// assert_eq!(labels, decrypted);
+/// # }
+/// ```
 pub mod error;
 
 #[cfg(feature = "encryption")]
