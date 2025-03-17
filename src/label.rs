@@ -1,6 +1,6 @@
 use crate::{
     error::{ExportError, ParseError},
-    Label, Labels, TransactionRecord,
+    Label, LabelRef, Labels, TransactionRecord,
 };
 use std::{
     fs::File,
@@ -111,6 +111,30 @@ impl Label {
     pub fn try_from_str(label: &str) -> Result<Self, ParseError> {
         let label: Self = serde_json::from_str(label)?;
         Ok(label)
+    }
+
+    /// Returns the ref as a LabelRef
+    pub fn ref_(&self) -> LabelRef {
+        match self {
+            Label::Transaction(record) => LabelRef::Txid(record.ref_),
+            Label::Address(record) => LabelRef::Address(record.ref_.clone()),
+            Label::PublicKey(record) => LabelRef::PublicKey(record.ref_.clone()),
+            Label::Input(record) => LabelRef::Input(record.ref_),
+            Label::Output(record) => LabelRef::Output(record.ref_),
+            Label::ExtendedPublicKey(record) => LabelRef::Xpub(record.ref_.clone()),
+        }
+    }
+
+    /// return the `label` value
+    pub fn label(&self) -> Option<String> {
+        match self {
+            Label::Transaction(record) => record.label.clone(),
+            Label::Address(record) => record.label.clone(),
+            Label::PublicKey(record) => record.label.clone(),
+            Label::Input(record) => record.label.clone(),
+            Label::Output(record) => record.label.clone(),
+            Label::ExtendedPublicKey(record) => record.label.clone(),
+        }
     }
 }
 
