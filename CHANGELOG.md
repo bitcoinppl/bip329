@@ -12,6 +12,7 @@
 - `spendable` field will always be serialized as a boolean,
   - it won't be `null` if it's `false`
   - it won't be omitted if it's `true`
+- Replace `InOutId` by `bitcoin::Outpoint`
 
 ### Added
 
@@ -20,6 +21,9 @@
 - IntoIterator for `Labels`
 - `iter` function for `Labels`
 - Add functions to get transaction label
+- Add `LabelRef` struct
+- Add `Label::ref_()` & `Label::label()`
+- Add `Labels::into_map()` & `Labels::into_string_map()`
 
 ## [0.1.2] - 2023-07-28
 
