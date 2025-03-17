@@ -1,6 +1,6 @@
 use crate::{
-    Label, Labels, TransactionRecord,
     error::{ExportError, ParseError},
+    Label, Labels, TransactionRecord,
 };
 use std::{
     fs::File,
@@ -216,7 +216,7 @@ mod tests {
         if let Label::Input(InputRecord { ref_, label }) = &records[3] {
             assert_eq!(
                 ref_,
-                &InOutId::from_str(
+                &bitcoin::OutPoint::from_str(
                     "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd:0"
                 )
                 .unwrap()
@@ -235,7 +235,7 @@ mod tests {
         {
             assert_eq!(
                 ref_,
-                &InOutId::from_str(
+                &bitcoin::OutPoint::from_str(
                     "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd:1"
                 )
                 .unwrap()
@@ -289,7 +289,7 @@ mod tests {
         {
             assert_eq!(
                 ref_,
-                &InOutId::from_str(
+                &bitcoin::OutPoint::from_str(
                     "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd:1"
                 )
                 .unwrap()
