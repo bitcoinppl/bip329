@@ -4,8 +4,6 @@
 
 ## [0.3.0] - 2025-03-17
 
-- Update dependencies
-
 ### Breaking Changes
 
 - Replace custom `InOutId` with `bitcoin::OutPoint`
