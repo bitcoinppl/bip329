@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## [0.4.0] - 2025-03-17
+
+### Breaking Changes
+
+- Remove `encryption` as a default feature
+
 ## [0.3.0] - 2025-03-17
 
 ### Breaking Changes
