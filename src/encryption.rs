@@ -5,7 +5,7 @@ use std::{io::Write as _, path::Path};
 use age::secrecy::SecretString;
 use serde::{Deserialize, Serialize};
 
-use crate::{Labels, error::EncryptionError};
+use crate::{error::EncryptionError, Labels};
 
 /// A list of encrypted labels.
 #[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
@@ -89,7 +89,7 @@ impl EncryptedLabels {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Labels, encryption::EncryptedLabels};
+    use crate::{encryption::EncryptedLabels, Labels};
 
     #[test]
     fn test_encryption() {
