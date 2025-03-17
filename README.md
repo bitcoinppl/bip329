@@ -18,6 +18,7 @@ A library for working with [BIP329 labels](https://github.com/bitcoin/bips/blob/
 - Supports the [`uniffi`](https://github.com/mozilla/uniffi-rs) feature, for easy integration with other languages.
 
 #### Example Import:
+
 ```rust
 use bip329::Labels;
 
@@ -25,6 +26,7 @@ let labels = Labels::try_from_file("tests/data/labels.jsonl").unwrap();
 ```
 
 #### Example Export:
+
 ```rust
 use bip329::Labels;
 
@@ -35,7 +37,10 @@ let labels = Labels::try_from_file("tests/data/labels.jsonl").unwrap();
 let jsonl = labels.export().unwrap();
 ```
 
-#### Example encryption:
+<!-- cargo-rdme end -->
+
+#### Example encryption (requires the `encryption` to be enabled):
+
 ```rust
 use bip329::{Labels, encryption::EncryptedLabels};
 
@@ -46,5 +51,3 @@ let encrypted = EncryptedLabels::read_from_file("tests/data/encrypted_labels.age
 let decrypted = encrypted.decrypt("passphrase").unwrap();
 assert_eq!(labels, decrypted);
 ```
-
-<!-- cargo-rdme end -->
