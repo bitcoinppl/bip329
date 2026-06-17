@@ -1,6 +1,7 @@
 use crate::{
     error::{ExportError, ParseError},
-    Label, LabelRef, Labels, TransactionRecord,
+    Label, LabelRef, Labels, OutputSpendableField, ParsedLabels, SpendableFieldValue,
+    TransactionRecord,
 };
 use std::{
     collections::HashMap,
@@ -16,7 +17,10 @@ impl Labels {
         Self(labels)
     }
 
-    /// Create a new Labels struct from a string.
+    /// Create labels from JSONL when normalized BIP329 records are enough
+    ///
+    /// Use this for normal imports where an omitted output `spendable` field can
+    /// be treated the same as `spendable: true`
     pub fn try_from_str(labels: &str) -> Result<Self, ParseError> {
         let labels = labels
             .trim()
@@ -25,6 +29,36 @@ impl Labels {
             .collect::<Result<Vec<Label>, _>>()?;
 
         Ok(Self(labels))
+    }
+
+    /// Create labels while preserving output `spendable` field metadata
+    ///
+    /// Use this when callers need to distinguish omitted `spendable` fields from
+    /// explicitly provided booleans or string booleans
+    pub fn try_from_str_with_metadata(labels: &str) -> Result<ParsedLabels, ParseError> {
+        let mut output_spendable = Vec::new();
+        let labels = labels
+            .trim()
+            .lines()
+            .map(|line| {
+                let label: Label = serde_json::from_str(line)?;
+
+                if let Label::Output(record) = &label {
+                    let metadata: OutputSpendableMetadata = serde_json::from_str(line)?;
+                    output_spendable.push(OutputSpendableField {
+                        ref_: record.ref_,
+                        value: metadata.spendable,
+                    });
+                }
+
+                Ok(label)
+            })
+            .collect::<Result<Vec<Label>, ParseError>>()?;
+
+        Ok(ParsedLabels {
+            labels: Self(labels),
+            output_spendable,
+        })
     }
 
     /// Create a new Labels struct from a file.
@@ -117,6 +151,17 @@ impl Labels {
     pub fn iter(&self) -> impl Iterator<Item = &Label> {
         self.0.iter()
     }
+}
+
+/// Output-only metadata that is intentionally not part of [`crate::OutputRecord`]
+///
+/// `crate::OutputRecord` normalizes missing `spendable` to `true`; this helper keeps
+/// the original field presence and representation available to metadata-aware
+/// callers
+#[derive(serde::Deserialize)]
+struct OutputSpendableMetadata {
+    #[serde(default)]
+    spendable: SpendableFieldValue,
 }
 
 impl Label {
@@ -335,6 +380,42 @@ mod tests {
             assert!(*spendable);
             assert!(record.spendable());
         };
+    }
+
+    #[test]
+    fn test_output_spendable_metadata_omitted() {
+        let jsonl = r#"{"type": "output", "ref": "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd:1", "label": "Output" }"#;
+
+        let labels = Labels::try_from_str_with_metadata(jsonl).unwrap();
+
+        assert_eq!(
+            labels.output_spendable[0].value,
+            SpendableFieldValue::Omitted
+        );
+    }
+
+    #[test]
+    fn test_output_spendable_metadata_boolean() {
+        let jsonl = r#"{"type": "output", "ref": "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd:1", "label": "Output", "spendable": false}"#;
+
+        let labels = Labels::try_from_str_with_metadata(jsonl).unwrap();
+
+        assert_eq!(
+            labels.output_spendable[0].value,
+            SpendableFieldValue::Boolean(false)
+        );
+    }
+
+    #[test]
+    fn test_output_spendable_metadata_string() {
+        let jsonl = r#"{"type": "output", "ref": "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd:1", "label": "Output", "spendable": "true"}"#;
+
+        let labels = Labels::try_from_str_with_metadata(jsonl).unwrap();
+
+        assert_eq!(
+            labels.output_spendable[0].value,
+            SpendableFieldValue::String(true)
+        );
     }
 
     #[test]
