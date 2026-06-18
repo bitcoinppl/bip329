@@ -59,6 +59,75 @@ use std::fmt::Display;
 #[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Labels(Vec<Label>);
 
+/// A parsed BIP329 label set with metadata that is lost by [`Labels`]
+///
+/// Returned by [`Labels::try_from_str_with_metadata`] for imports that need
+/// access to both normalized labels and output-specific JSON field metadata
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct ParsedLabels {
+    /// The normalized BIP329 labels
+    pub labels: Labels,
+    /// The original `spendable` field state for each output label
+    pub output_spendable: Vec<OutputSpendableField>,
+}
+
+/// Presence and JSON representation of an output `spendable` field
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct OutputSpendableField {
+    /// The output reference whose `spendable` metadata was captured
+    pub ref_: bitcoin::OutPoint,
+    /// Whether `spendable` was omitted, a boolean, or a string boolean
+    pub value: SpendableFieldValue,
+}
+
+/// The parsed JSON representation of an output `spendable` field
+#[derive(Clone, Debug, Default, Hash, PartialEq, Eq)]
+pub enum SpendableFieldValue {
+    /// The field was not present in the original JSON object
+    #[default]
+    Omitted,
+    /// The field was present as a JSON boolean
+    Boolean(bool),
+    /// The field was present as a JSON string containing `true` or `false`
+    String(bool),
+}
+
+impl SpendableFieldValue {
+    /// Return the explicit boolean value, or `None` when the field was omitted
+    pub fn explicit_value(&self) -> Option<bool> {
+        match self {
+            Self::Omitted => None,
+            Self::Boolean(value) | Self::String(value) => Some(*value),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for SpendableFieldValue {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum SpendableField {
+            Bool(bool),
+            String(String),
+        }
+
+        match SpendableField::deserialize(deserializer)? {
+            SpendableField::Bool(value) => Ok(Self::Boolean(value)),
+            SpendableField::String(value) => match value.to_ascii_lowercase().as_str() {
+                "true" => Ok(Self::String(true)),
+                "false" => Ok(Self::String(false)),
+                string => {
+                    let message = format!("Invalid boolean string: {string}");
+                    Err(serde::de::Error::custom(message))
+                }
+            },
+        }
+    }
+}
+
 /// The main data structure for BIP329 labels.
 #[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(tag = "type")]
