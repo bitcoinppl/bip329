@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [0.5.0] - 2026-06-18
+
 ### Added
 
 - Add `Labels::try_from_str_with_metadata()` for preserving output `spendable` field metadata
