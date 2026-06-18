@@ -8,7 +8,10 @@ where
     // keep normal output parsing aligned with metadata-aware parsing
     let value = <SpendableFieldValue as serde::Deserialize>::deserialize(deserializer)?;
 
-    value
-        .explicit_value()
-        .ok_or_else(|| serde::de::Error::custom("missing spendable value"))
+    match value {
+        SpendableFieldValue::Boolean(value) | SpendableFieldValue::String(value) => Ok(value),
+        SpendableFieldValue::Omitted => {
+            unreachable!("serde only calls this deserializer for present spendable fields")
+        }
+    }
 }

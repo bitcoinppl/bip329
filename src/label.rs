@@ -1,7 +1,7 @@
 use crate::{
     error::{ExportError, ParseError},
-    Label, LabelRef, Labels, OutputSpendableField, ParsedLabels, SpendableFieldValue,
-    TransactionRecord,
+    AddressRecord, ExtendedPublicKeyRecord, InputRecord, Label, LabelRef, Labels, OutputRecord,
+    OutputSpendableField, ParsedLabels, PublicKeyRecord, SpendableFieldValue, TransactionRecord,
 };
 use std::{
     collections::HashMap,
@@ -37,26 +37,20 @@ impl Labels {
     /// explicitly provided booleans or string booleans
     pub fn try_from_str_with_metadata(labels: &str) -> Result<ParsedLabels, ParseError> {
         let mut output_spendable = Vec::new();
-        let labels = labels
-            .trim()
-            .lines()
-            .map(|line| {
-                let label: Label = serde_json::from_str(line)?;
+        let mut parsed_labels = Vec::new();
 
-                if let Label::Output(record) = &label {
-                    let metadata: OutputSpendableMetadata = serde_json::from_str(line)?;
-                    output_spendable.push(OutputSpendableField {
-                        ref_: record.ref_,
-                        value: metadata.spendable,
-                    });
-                }
+        for line in labels.trim().lines() {
+            let line: ParsedLabelLine = serde_json::from_str(line)?;
+            let (label, spendable) = line.into_label_and_spendable();
+            parsed_labels.push(label);
 
-                Ok(label)
-            })
-            .collect::<Result<Vec<Label>, ParseError>>()?;
+            if let Some(spendable) = spendable {
+                output_spendable.push(spendable);
+            }
+        }
 
         Ok(ParsedLabels {
-            labels: Self(labels),
+            labels: Self(parsed_labels),
             output_spendable,
         })
     }
@@ -153,15 +147,60 @@ impl Labels {
     }
 }
 
-/// Output-only metadata that is intentionally not part of [`crate::OutputRecord`]
-///
-/// `crate::OutputRecord` normalizes missing `spendable` to `true`; this helper keeps
-/// the original field presence and representation available to metadata-aware
-/// callers
 #[derive(serde::Deserialize)]
-struct OutputSpendableMetadata {
+#[serde(tag = "type")]
+enum ParsedLabelLine {
+    #[serde(rename = "tx")]
+    Transaction(TransactionRecord),
+    #[serde(rename = "addr")]
+    Address(AddressRecord),
+    #[serde(rename = "pubkey")]
+    PublicKey(PublicKeyRecord),
+    #[serde(rename = "input")]
+    Input(InputRecord),
+    #[serde(rename = "output")]
+    Output(ParsedOutputRecord),
+    #[serde(rename = "xpub")]
+    ExtendedPublicKey(ExtendedPublicKeyRecord),
+}
+
+impl ParsedLabelLine {
+    fn into_label_and_spendable(self) -> (Label, Option<OutputSpendableField>) {
+        match self {
+            Self::Transaction(record) => (Label::Transaction(record), None),
+            Self::Address(record) => (Label::Address(record), None),
+            Self::PublicKey(record) => (Label::PublicKey(record), None),
+            Self::Input(record) => (Label::Input(record), None),
+            Self::Output(record) => record.into_label_and_spendable(),
+            Self::ExtendedPublicKey(record) => (Label::ExtendedPublicKey(record), None),
+        }
+    }
+}
+
+#[derive(serde::Deserialize)]
+struct ParsedOutputRecord {
+    #[serde(rename = "ref")]
+    ref_: bitcoin::OutPoint,
+    label: Option<String>,
     #[serde(default)]
     spendable: SpendableFieldValue,
+}
+
+impl ParsedOutputRecord {
+    fn into_label_and_spendable(self) -> (Label, Option<OutputSpendableField>) {
+        let spendable = self.spendable.explicit_value().unwrap_or(true);
+        let label = Label::Output(OutputRecord {
+            ref_: self.ref_,
+            label: self.label,
+            spendable,
+        });
+        let output_spendable = OutputSpendableField {
+            ref_: self.ref_,
+            value: self.spendable,
+        };
+
+        (label, Some(output_spendable))
+    }
 }
 
 impl Label {
@@ -416,6 +455,27 @@ mod tests {
             labels.output_spendable[0].value,
             SpendableFieldValue::String(true)
         );
+    }
+
+    #[test]
+    fn test_output_spendable_metadata_mixed_labels() {
+        let jsonl = r#"{"type": "tx", "ref": "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd", "label": "Transaction"}
+{"type": "output", "ref": "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd:1", "label": "Output", "spendable": "false"}
+{"type": "addr", "ref": "bc1q34aq5drpuwy3wgl9lhup9892qp6svr8ldzyy7c", "label": "Address"}"#;
+
+        let labels = Labels::try_from_str_with_metadata(jsonl).unwrap();
+
+        assert_eq!(labels.labels.len(), 3);
+        assert_eq!(labels.output_spendable.len(), 1);
+        assert_eq!(
+            labels.output_spendable[0].value,
+            SpendableFieldValue::String(false)
+        );
+
+        let Label::Output(record) = &labels.labels[1] else {
+            panic!("Expected Output");
+        };
+        assert!(!record.spendable());
     }
 
     #[test]
