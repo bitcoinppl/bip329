@@ -19,8 +19,8 @@ impl Labels {
 
     /// Create labels from JSONL when normalized BIP329 records are enough
     ///
-    /// Use this for normal imports where an omitted output `spendable` field can
-    /// be treated the same as `spendable: true`
+    /// Use this for normal imports where only the explicit `spendable` value is
+    /// needed and the original JSON representation can be normalized
     pub fn try_from_str(labels: &str) -> Result<Self, ParseError> {
         let labels = labels
             .trim()
@@ -188,11 +188,10 @@ struct ParsedOutputRecord {
 
 impl ParsedOutputRecord {
     fn into_label_and_spendable(self) -> (Label, Option<OutputSpendableField>) {
-        let spendable = self.spendable.explicit_value().unwrap_or(true);
         let label = Label::Output(OutputRecord {
             ref_: self.ref_,
             label: self.label,
-            spendable,
+            spendable: self.spendable.explicit_value(),
         });
         let output_spendable = OutputSpendableField {
             ref_: self.ref_,
@@ -362,7 +361,7 @@ mod tests {
                 .unwrap()
             );
             assert_eq!(label, &Some("Output".to_string()));
-            assert!(!*spendable);
+            assert_eq!(*spendable, Some(false));
         } else {
             panic!("Expected Output");
         }
@@ -416,7 +415,7 @@ mod tests {
                 .unwrap()
             );
             assert_eq!(*label, Some("Output".to_string()));
-            assert!(*spendable);
+            assert_eq!(*spendable, None);
             assert!(record.spendable());
         };
     }
@@ -426,7 +425,11 @@ mod tests {
         let jsonl = r#"{"type": "output", "ref": "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd:1", "label": "Output" }"#;
 
         let labels = Labels::try_from_str_with_metadata(jsonl).unwrap();
+        let Label::Output(record) = &labels.labels[0] else {
+            panic!("Expected Output");
+        };
 
+        assert_eq!(record.spendable, None);
         assert_eq!(
             labels.output_spendable[0].value,
             SpendableFieldValue::Omitted
@@ -438,7 +441,11 @@ mod tests {
         let jsonl = r#"{"type": "output", "ref": "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd:1", "label": "Output", "spendable": false}"#;
 
         let labels = Labels::try_from_str_with_metadata(jsonl).unwrap();
+        let Label::Output(record) = &labels.labels[0] else {
+            panic!("Expected Output");
+        };
 
+        assert_eq!(record.spendable, Some(false));
         assert_eq!(
             labels.output_spendable[0].value,
             SpendableFieldValue::Boolean(false)
@@ -450,11 +457,26 @@ mod tests {
         let jsonl = r#"{"type": "output", "ref": "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd:1", "label": "Output", "spendable": "true"}"#;
 
         let labels = Labels::try_from_str_with_metadata(jsonl).unwrap();
+        let Label::Output(record) = &labels.labels[0] else {
+            panic!("Expected Output");
+        };
 
+        assert_eq!(record.spendable, Some(true));
         assert_eq!(
             labels.output_spendable[0].value,
             SpendableFieldValue::String(true)
         );
+    }
+
+    #[test]
+    fn output_export_omits_absent_spendable() {
+        let jsonl = r#"{"type": "output", "ref": "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd:1", "label": "Output" }"#;
+
+        let labels = Labels::try_from_str(jsonl).unwrap();
+        let exported = labels.export().unwrap();
+
+        assert!(exported.contains(r#""label":"Output""#));
+        assert!(!exported.contains("spendable"));
     }
 
     #[test]
@@ -475,6 +497,7 @@ mod tests {
         let Label::Output(record) = &labels.labels[1] else {
             panic!("Expected Output");
         };
+        assert_eq!(record.spendable, Some(false));
         assert!(!record.spendable());
     }
 
