@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [0.6.0] - 2026-07-03
+
 ### Breaking Changes
 
 - Change `OutputRecord.spendable` from `bool` to `Option<bool>` so omitted
