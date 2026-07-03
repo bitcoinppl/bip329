@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Breaking Changes
+
+- Change `OutputRecord.spendable` from `bool` to `Option<bool>` so omitted
+  `spendable` fields round-trip as absent and explicit booleans remain explicit
+
 ## [0.5.0] - 2026-06-18
 
 ### Added

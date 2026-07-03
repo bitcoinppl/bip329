@@ -217,10 +217,11 @@ pub struct OutputRecord {
     pub label: Option<String>,
 
     #[serde(
-        default = "default_true",
-        deserialize_with = "serde_util::deserialize_string_or_bool"
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "serde_util::deserialize_optional_string_or_bool"
     )]
-    pub spendable: bool,
+    pub spendable: Option<bool>,
 }
 
 /// An extended public key label.
@@ -234,10 +235,6 @@ pub struct ExtendedPublicKeyRecord {
 impl OutputRecord {
     /// Defaults to being spendable if no spendable field is present
     pub fn spendable(&self) -> bool {
-        self.spendable
+        self.spendable.unwrap_or(true)
     }
-}
-
-fn default_true() -> bool {
-    true
 }
