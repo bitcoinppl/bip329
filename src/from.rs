@@ -1,4 +1,7 @@
-use crate::{AddressRecord, InputRecord, Label, Labels, OutputRecord, TransactionRecord};
+use crate::{
+    AddressRecord, InputRecord, Label, Labels, OutputRecord, SilentPaymentsScanRecord,
+    TransactionRecord,
+};
 
 impl From<TransactionRecord> for Label {
     fn from(value: TransactionRecord) -> Self {
@@ -21,6 +24,12 @@ impl From<InputRecord> for Label {
 impl From<OutputRecord> for Label {
     fn from(value: OutputRecord) -> Self {
         Self::Output(value)
+    }
+}
+
+impl From<SilentPaymentsScanRecord> for Label {
+    fn from(value: SilentPaymentsScanRecord) -> Self {
+        Self::SilentPaymentsScan(value)
     }
 }
 

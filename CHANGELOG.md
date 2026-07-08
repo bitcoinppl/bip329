@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Breaking Changes
+
+- Add `Label::SilentPaymentsScan`, which downstream exhaustive matches must handle
+
+### Added
+
+- Add `spscan` label records for silent payments scan key expressions
+- Add parse options for ignoring unsupported record types during imports
+
 ## [0.6.0] - 2026-07-03
 
 ### Breaking Changes

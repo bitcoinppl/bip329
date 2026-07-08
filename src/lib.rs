@@ -59,6 +59,23 @@ use std::fmt::Display;
 #[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Labels(Vec<Label>);
 
+/// Options for importing BIP329 JSONL records
+#[derive(Clone, Copy, Debug, Default, Hash, PartialEq, Eq)]
+pub struct LabelParseOptions {
+    pub(crate) ignore_unknown_types: bool,
+}
+
+impl LabelParseOptions {
+    /// Skip records whose `type` is not supported by this crate
+    ///
+    /// Extra fields on known record types are ignored by default.
+    #[must_use]
+    pub fn ignore_unknown_types(mut self, ignore: bool) -> Self {
+        self.ignore_unknown_types = ignore;
+        self
+    }
+}
+
 /// A parsed BIP329 label set with metadata that is lost by [`Labels`]
 ///
 /// Returned by [`Labels::try_from_str_with_metadata`] for imports that need
@@ -144,6 +161,8 @@ pub enum Label {
     Output(OutputRecord),
     #[serde(rename = "xpub")]
     ExtendedPublicKey(ExtendedPublicKeyRecord),
+    #[serde(rename = "spscan")]
+    SilentPaymentsScan(SilentPaymentsScanRecord),
 }
 
 /// An enum representing all possible [`Label::ref_`]
@@ -155,6 +174,7 @@ pub enum LabelRef {
     Input(bitcoin::OutPoint),
     Output(bitcoin::OutPoint),
     Xpub(String),
+    SilentPaymentsScan(String),
 }
 
 impl Display for LabelRef {
@@ -166,6 +186,7 @@ impl Display for LabelRef {
             LabelRef::Input(outpoint) => write!(f, "{}", outpoint),
             LabelRef::Output(outpoint) => write!(f, "{}", outpoint),
             LabelRef::Xpub(xpub) => write!(f, "{}", xpub),
+            LabelRef::SilentPaymentsScan(scan_key) => write!(f, "{}", scan_key),
         }
     }
 }
@@ -227,6 +248,14 @@ pub struct OutputRecord {
 /// An extended public key label.
 #[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ExtendedPublicKeyRecord {
+    #[serde(rename = "ref")]
+    pub ref_: String,
+    pub label: Option<String>,
+}
+
+/// A silent payments scan key expression label.
+#[derive(Clone, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct SilentPaymentsScanRecord {
     #[serde(rename = "ref")]
     pub ref_: String,
     pub label: Option<String>,
