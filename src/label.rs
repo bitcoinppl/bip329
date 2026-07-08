@@ -1,7 +1,8 @@
 use crate::{
     error::{ExportError, ParseError},
-    AddressRecord, ExtendedPublicKeyRecord, InputRecord, Label, LabelRef, Labels, OutputRecord,
-    OutputSpendableField, ParsedLabels, PublicKeyRecord, SpendableFieldValue, TransactionRecord,
+    AddressRecord, ExtendedPublicKeyRecord, InputRecord, Label, LabelParseOptions, LabelRef,
+    Labels, OutputRecord, OutputSpendableField, ParsedLabels, PublicKeyRecord,
+    SilentPaymentsScanRecord, SpendableFieldValue, TransactionRecord,
 };
 use std::{
     collections::HashMap,
@@ -22,13 +23,27 @@ impl Labels {
     /// Use this for normal imports where only the explicit `spendable` value is
     /// needed and the original JSON representation can be normalized
     pub fn try_from_str(labels: &str) -> Result<Self, ParseError> {
-        let labels = labels
-            .trim()
-            .lines()
-            .map(serde_json::from_str)
-            .collect::<Result<Vec<Label>, _>>()?;
+        Self::try_from_str_with_options(labels, LabelParseOptions::default())
+    }
 
-        Ok(Self(labels))
+    /// Create labels from JSONL using custom parse options
+    ///
+    /// Known record types accept additional JSON fields by default. Set
+    /// [`LabelParseOptions::ignore_unknown_types`] to skip records with
+    /// unsupported `type` values.
+    pub fn try_from_str_with_options(
+        labels: &str,
+        options: LabelParseOptions,
+    ) -> Result<Self, ParseError> {
+        let mut parsed_labels = Vec::new();
+
+        for line in labels.trim().lines() {
+            if let Some(label) = parse_label_line(line, options)? {
+                parsed_labels.push(label);
+            }
+        }
+
+        Ok(Self(parsed_labels))
     }
 
     /// Create labels while preserving output `spendable` field metadata
@@ -36,11 +51,24 @@ impl Labels {
     /// Use this when callers need to distinguish omitted `spendable` fields from
     /// explicitly provided booleans or string booleans
     pub fn try_from_str_with_metadata(labels: &str) -> Result<ParsedLabels, ParseError> {
+        Self::try_from_str_with_metadata_and_options(labels, LabelParseOptions::default())
+    }
+
+    /// Create labels with metadata using custom parse options
+    ///
+    /// Unknown `type` values are skipped when
+    /// [`LabelParseOptions::ignore_unknown_types`] is enabled.
+    pub fn try_from_str_with_metadata_and_options(
+        labels: &str,
+        options: LabelParseOptions,
+    ) -> Result<ParsedLabels, ParseError> {
         let mut output_spendable = Vec::new();
         let mut parsed_labels = Vec::new();
 
         for line in labels.trim().lines() {
-            let line: ParsedLabelLine = serde_json::from_str(line)?;
+            let Some(line) = parse_label_line_with_metadata(line, options)? else {
+                continue;
+            };
             let (label, spendable) = line.into_label_and_spendable();
             parsed_labels.push(label);
 
@@ -57,17 +85,25 @@ impl Labels {
 
     /// Create a new Labels struct from a file.
     pub fn try_from_file(path: impl AsRef<Path>) -> Result<Self, ParseError> {
+        Self::try_from_file_with_options(path, LabelParseOptions::default())
+    }
+
+    /// Create labels from a file using custom parse options.
+    pub fn try_from_file_with_options(
+        path: impl AsRef<Path>,
+        options: LabelParseOptions,
+    ) -> Result<Self, ParseError> {
         let file = File::open(path.as_ref())?;
         let buffer_reader = BufReader::new(file);
 
-        let labels = buffer_reader
-            .lines()
-            .map(|line| {
-                let line = &line.map_err(ParseError::FileReadError)?;
-                let label: Label = serde_json::from_str(line).map_err(ParseError::ParseError)?;
-                Ok::<Label, ParseError>(label)
-            })
-            .collect::<Result<Vec<Label>, _>>()?;
+        let mut labels = Vec::new();
+
+        for line in buffer_reader.lines() {
+            let line = line.map_err(ParseError::FileReadError)?;
+            if let Some(label) = parse_label_line(&line, options)? {
+                labels.push(label);
+            }
+        }
 
         Ok(Self::new(labels))
     }
@@ -147,6 +183,52 @@ impl Labels {
     }
 }
 
+fn parse_label_line(line: &str, options: LabelParseOptions) -> Result<Option<Label>, ParseError> {
+    if should_skip_unknown_label_type(line, options)? {
+        return Ok(None);
+    }
+
+    let label = serde_json::from_str(line)?;
+    Ok(Some(label))
+}
+
+fn parse_label_line_with_metadata(
+    line: &str,
+    options: LabelParseOptions,
+) -> Result<Option<ParsedLabelLine>, ParseError> {
+    if should_skip_unknown_label_type(line, options)? {
+        return Ok(None);
+    }
+
+    let label = serde_json::from_str(line)?;
+    Ok(Some(label))
+}
+
+fn should_skip_unknown_label_type(
+    line: &str,
+    options: LabelParseOptions,
+) -> Result<bool, ParseError> {
+    if !options.ignore_unknown_types {
+        return Ok(false);
+    }
+
+    let label_type: LabelType = serde_json::from_str(line)?;
+    Ok(!is_known_label_type(&label_type.type_))
+}
+
+fn is_known_label_type(label_type: &str) -> bool {
+    matches!(
+        label_type,
+        "tx" | "addr" | "pubkey" | "input" | "output" | "xpub" | "spscan"
+    )
+}
+
+#[derive(serde::Deserialize)]
+struct LabelType {
+    #[serde(rename = "type")]
+    type_: String,
+}
+
 #[derive(serde::Deserialize)]
 #[serde(tag = "type")]
 enum ParsedLabelLine {
@@ -162,6 +244,8 @@ enum ParsedLabelLine {
     Output(ParsedOutputRecord),
     #[serde(rename = "xpub")]
     ExtendedPublicKey(ExtendedPublicKeyRecord),
+    #[serde(rename = "spscan")]
+    SilentPaymentsScan(SilentPaymentsScanRecord),
 }
 
 impl ParsedLabelLine {
@@ -173,6 +257,7 @@ impl ParsedLabelLine {
             Self::Input(record) => (Label::Input(record), None),
             Self::Output(record) => record.into_label_and_spendable(),
             Self::ExtendedPublicKey(record) => (Label::ExtendedPublicKey(record), None),
+            Self::SilentPaymentsScan(record) => (Label::SilentPaymentsScan(record), None),
         }
     }
 }
@@ -218,6 +303,7 @@ impl Label {
             Label::Input(record) => record.label.as_deref(),
             Label::Output(record) => record.label.as_deref(),
             Label::ExtendedPublicKey(record) => record.label.as_deref(),
+            Label::SilentPaymentsScan(record) => record.label.as_deref(),
         }
     }
 
@@ -230,6 +316,7 @@ impl Label {
             Label::Input(record) => LabelRef::Input(record.ref_),
             Label::Output(record) => LabelRef::Output(record.ref_),
             Label::ExtendedPublicKey(record) => LabelRef::Xpub(record.ref_.clone()),
+            Label::SilentPaymentsScan(record) => LabelRef::SilentPaymentsScan(record.ref_.clone()),
         }
     }
 }
@@ -283,6 +370,7 @@ mod tests {
 {"type": "input", "ref": "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd:0", "label": "Input"}
 {"type": "output", "ref": "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd:1", "label": "Output", "spendable": false}
 {"type": "xpub", "ref": "xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8", "label": "Extended Public Key"}
+{"type": "spscan", "ref": "spscan1q5zs2pg9q5zs2pg9q5zs2pg9q5zs2pg9q5zs2pg9q5zs2pg9q5zsq9q6qjevn2kmdrnpuxt0v6h2kr2a2epkr0g6nk55ftf0xcxtddazgkrth3e", "label": "Silent Payments Scan Key Expression"}
 {"type": "tx", "ref": "f546156d9044844e02b181026a1a407abfca62e7ea1159f87bbeaa77b4286c74", "label": "Account #1 Transaction", "origin": "wpkh([d34db33f/84'/0'/1'])"}"#;
 
         let records: Vec<Label> = test_vector
@@ -290,7 +378,7 @@ mod tests {
             .filter_map(|line| from_str(line).ok())
             .collect();
 
-        assert_eq!(records.len(), 7);
+        assert_eq!(records.len(), 8);
 
         // Test Transaction
         if let Label::Transaction(TransactionRecord {
@@ -377,12 +465,26 @@ mod tests {
             panic!("Expected ExtendedPublicKey");
         }
 
+        // Test SilentPaymentsScan
+        if let Label::SilentPaymentsScan(SilentPaymentsScanRecord { ref_, label }) = &records[6] {
+            assert_eq!(
+                ref_,
+                "spscan1q5zs2pg9q5zs2pg9q5zs2pg9q5zs2pg9q5zs2pg9q5zs2pg9q5zsq9q6qjevn2kmdrnpuxt0v6h2kr2a2epkr0g6nk55ftf0xcxtddazgkrth3e"
+            );
+            assert_eq!(
+                label,
+                &Some("Silent Payments Scan Key Expression".to_string())
+            );
+        } else {
+            panic!("Expected SilentPaymentsScan");
+        }
+
         // Test second Transaction
         if let Label::Transaction(TransactionRecord {
             ref_,
             label,
             origin,
-        }) = &records[6]
+        }) = &records[7]
         {
             assert_eq!(
                 ref_,
@@ -477,6 +579,73 @@ mod tests {
 
         assert!(exported.contains(r#""label":"Output""#));
         assert!(!exported.contains("spendable"));
+    }
+
+    #[test]
+    fn spscan_label_helpers_return_record_data() {
+        let scan_key = "spscan1q5zs2pg9q5zs2pg9q5zs2pg9q5zs2pg9q5zs2pg9q5zs2pg9q5zsq9q6qjevn2kmdrnpuxt0v6h2kr2a2epkr0g6nk55ftf0xcxtddazgkrth3e";
+        let jsonl = format!(
+            r#"{{"type": "spscan", "ref": "{scan_key}", "label": "Silent Payments Scan Key Expression"}}"#
+        );
+
+        let label = Label::try_from_str(&jsonl).unwrap();
+
+        assert_eq!(label.label(), Some("Silent Payments Scan Key Expression"));
+        assert_eq!(
+            label.ref_(),
+            LabelRef::SilentPaymentsScan(scan_key.to_string())
+        );
+    }
+
+    #[test]
+    fn known_records_ignore_additional_fields() {
+        let jsonl = r#"{"type": "tx", "ref": "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd", "label": "Transaction", "height": 1, "rate": {"USD": 105620.0}}"#;
+
+        let labels = Labels::try_from_str(jsonl).unwrap();
+        let Label::Transaction(record) = &labels[0] else {
+            panic!("Expected Transaction");
+        };
+
+        assert_eq!(record.label.as_deref(), Some("Transaction"));
+    }
+
+    #[test]
+    fn can_ignore_unknown_record_types() {
+        let jsonl = r#"{"type": "tx", "ref": "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd", "label": "Transaction"}
+{"type": "future", "ref": {"not": "validated"}, "label": "Unknown"}
+{"type": "addr", "ref": "bc1q34aq5drpuwy3wgl9lhup9892qp6svr8ldzyy7c", "label": "Address"}"#;
+
+        assert!(Labels::try_from_str(jsonl).is_err());
+
+        let labels = Labels::try_from_str_with_options(
+            jsonl,
+            LabelParseOptions::default().ignore_unknown_types(true),
+        )
+        .unwrap();
+
+        assert_eq!(labels.len(), 2);
+        assert!(matches!(labels[0], Label::Transaction(_)));
+        assert!(matches!(labels[1], Label::Address(_)));
+    }
+
+    #[test]
+    fn metadata_parser_can_ignore_unknown_record_types() {
+        let jsonl = r#"{"type": "tx", "ref": "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd", "label": "Transaction"}
+{"type": "future", "ref": {"not": "validated"}, "label": "Unknown"}
+{"type": "output", "ref": "f91d0a8a78462bc59398f2c5d7a84fcff491c26ba54c4833478b202796c8aafd:1", "label": "Output", "spendable": "false"}"#;
+
+        let labels = Labels::try_from_str_with_metadata_and_options(
+            jsonl,
+            LabelParseOptions::default().ignore_unknown_types(true),
+        )
+        .unwrap();
+
+        assert_eq!(labels.labels.len(), 2);
+        assert_eq!(labels.output_spendable.len(), 1);
+        assert_eq!(
+            labels.output_spendable[0].value,
+            SpendableFieldValue::String(false)
+        );
     }
 
     #[test]
